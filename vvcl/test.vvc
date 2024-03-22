@@ -1,0 +1,4 @@
+fun hello(a: String, b: String) -> String {
+    x = { 5 };
+    x
+}
