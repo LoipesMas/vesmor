@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Ident(pub String);
 
@@ -19,19 +17,29 @@ pub struct Block {
 #[derive(Debug, Clone, Copy)]
 pub enum BinaryOperator {
     IntAdd,
+    IntSub,
+    IntMul,
+    IntDiv,
+    FloatAdd,
+    FloatSub,
+    FloatMul,
+    FloatDiv,
     StringConcat,
     ListConcat,
 }
 
 impl BinaryOperator {
-    pub const fn valid_strs() -> &'static [&'static str] {
-        &["+", "~", "<>"]
-    }
-
     pub fn from_str(s: &str) -> Result<Self, ()> {
         use BinaryOperator::*;
         match s {
             "+" => Ok(IntAdd),
+            "-" => Ok(IntSub),
+            "*" => Ok(IntMul),
+            "/" => Ok(IntDiv),
+            "+." => Ok(FloatAdd),
+            "-." => Ok(FloatSub),
+            "*." => Ok(FloatMul),
+            "/." => Ok(FloatDiv),
             "~" => Ok(StringConcat),
             "<>" => Ok(ListConcat),
             _ => Err(()),

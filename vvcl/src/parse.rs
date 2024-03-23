@@ -83,9 +83,19 @@ fn value_expr(input: &str) -> PResult<Expr> {
     map(ident, Expr::Value)(input)
 }
 
+macro_rules! alt_tags {
+    ($($tag:expr),*) => {
+        alt(( $(tag($tag)),* ))
+    };
+}
+
 fn binary_operator(input: &str) -> PResult<BinaryOperator> {
     map_res(
-        delimited(space0, alt((tag("+"), tag("~"), tag("<>"))), space0),
+        delimited(
+            space0,
+            alt_tags!("+", "-", "*", "/", "+.", "-.", "*.", "/.", "~", "<>"),
+            space0,
+        ),
         BinaryOperator::from_str,
     )(input)
 }

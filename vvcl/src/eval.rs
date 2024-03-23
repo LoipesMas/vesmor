@@ -112,12 +112,22 @@ fn apply_binary_operation(
         right,
     }: BinaryOperation,
 ) -> Expr {
+    use BinaryOperator::*;
+    use Expr::*;
     match (operator, &*left, &*right) {
-        (BinaryOperator::IntAdd, &Expr::Int(a), &Expr::Int(b)) => Expr::Int(a + b),
-        (BinaryOperator::StringConcat, Expr::String(ref a), Expr::String(ref b)) => {
-            Expr::String(a.to_owned() + &b)
+        (IntAdd, &Int(a), &Int(b)) => Int(a + b),
+        (IntSub, &Int(a), &Int(b)) => Int(a - b),
+        (IntMul, &Int(a), &Int(b)) => Int(a * b),
+        (IntDiv, &Int(a), &Int(b)) => Int(a / b),
+        (FloatAdd, &Float(a), &Float(b)) => Float(a + b),
+        (FloatSub, &Float(a), &Float(b)) => Float(a - b),
+        (FloatMul, &Float(a), &Float(b)) => Float(a * b),
+        (FloatDiv, &Float(a), &Float(b)) => Float(a / b),
+        (StringConcat, String(ref a), String(ref b)) => String(a.to_owned() + &b),
+        (o, a, b) if a.is_realized() && b.is_realized() => {
+            panic!("Invalid use of operator: {:?} {:?} {:?}", a, o, b)
         }
-        _ => Expr::BinaryOperation(BinaryOperation {
+        _ => BinaryOperation(crate::ast::BinaryOperation {
             left,
             operator,
             right,
