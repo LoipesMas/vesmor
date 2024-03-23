@@ -3,6 +3,14 @@ use std::collections::HashMap;
 
 type Scope = HashMap<Ident, Expr>;
 
+fn scope_from_defs(defs: &Vec<Definition>) -> Scope {
+    let mut scope = Scope::new();
+    for def in defs {
+        scope.insert(def.name.clone(), def.body.clone());
+    }
+    scope
+}
+
 pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
     let combined_scope = {
@@ -13,37 +21,29 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
     match e {
         Expr::Block(b) => {
             let mut new_scope = scope.clone();
-            let mut new_definitions = vec![];
-            for def in &b.definitions {
-                let reduced_body = br(&combined_scope, &def.body);
-                let reduced_def = Definition {
-                    name: def.name.clone(),
-                    body: reduced_body.clone(),
-                };
-                new_definitions.push(reduced_def);
-                let r = new_scope.insert(def.name.clone(), reduced_body);
-                if r.is_some() {
-                    panic!("redefined {}!", def.name.0)
-                }
-            }
+            let reduced_defs = b
+                .definitions
+                .iter()
+                .map(|d| Definition {
+                    body: br(&combined_scope, &d.body),
+                    name: d.name.clone(),
+                })
+                .collect();
+            new_scope.extend(scope_from_defs(&reduced_defs));
             let new_expr = br(&new_scope, &b.expr);
             if new_expr.is_realized() {
                 new_expr
             } else {
                 // preserve scope for not-realized values
                 Expr::Block(Block {
-                    definitions: new_definitions,
+                    definitions: reduced_defs,
                     expr: Box::new(new_expr),
                 })
             }
         }
         Expr::Value(v) => {
             if let Some(e) = combined_scope.get(v) {
-                match br(&combined_scope, e) {
-                    // Does this do anything?
-                    a @ Expr::Value(_) => br(&combined_scope, &a),
-                    a => a,
-                }
+                br(&combined_scope, e)
             } else {
                 println!("variable not in scope: {}", v.0);
                 Expr::Value(v.clone())
@@ -77,9 +77,7 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
                 if let Expr::Function(fun) = fun_expr {
                     let reduced_args =
                         Vec::from_iter(fc.arguments.iter().map(|a| br(&combined_scope, a)));
-                    dbg!("foo");
                     if !reduced_args.iter().all(Expr::is_realized) {
-                        dbg!("bar");
                         println!("not reducing FunctionCall, because not all arguments are known!");
                         return e.clone();
                     }
@@ -94,10 +92,7 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
                             )
                         }
                     }
-                    let r = br(&inner_scope, &fun.body);
-                    dbg!(&inner_scope);
-                    dbg!(&r);
-                    r
+                    br(&inner_scope, &fun.body)
                 } else {
                     panic!("Tried to call non-function: {}", fc.name.0);
                 }
