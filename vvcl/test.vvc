@@ -1,8 +1,19 @@
-fun hello(a: Int, b: Int) -> Int {
-    z = { (y + 10) };
+main = (a: Int, b: Int) -> Int {
     y = { 
         x = 7;
         (x + (9 + 1))
     };
-    (a + (z + b))
+    z = { (y + 10) };
+    v = (a+(b+z));
+    addfour(addfour(v))
+}
+
+
+addtwo = (a: Int) -> Int {
+    added = { (0 + 2 )};
+    (a + added)
+}
+
+addfour = (value: Int) -> Int {
+    (addtwo(value) + 2)
 }

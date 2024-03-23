@@ -11,23 +11,23 @@ use nom::{
 };
 
 use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident,
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, FunctionCall, Ident,
 };
+
+type PResult<'a, O> = IResult<&'a str, O>;
 
 fn is_any(s: &'static str) -> impl Fn(char) -> bool {
     |e| s.contains([e])
 }
 
-fn parse_ident(input: &str) -> IResult<&str, Ident> {
-    dbg!("ident", input);
+fn ident(input: &str) -> PResult<Ident> {
     map(delimited(space0, alpha1, space0), |s: &str| {
         Ident(s.to_owned())
     })(input)
 }
 
-fn parse_arg_def(input: &str) -> IResult<&str, ArgDef> {
-    let (input, (name, typ)) =
-        separated_pair(parse_ident, tag(":"), take_till(is_any(",")))(input)?;
+fn arg_def(input: &str) -> PResult<ArgDef> {
+    let (input, (name, typ)) = separated_pair(ident, tag(":"), take_till(is_any(",")))(input)?;
     Ok((
         input,
         ArgDef {
@@ -37,23 +37,18 @@ fn parse_arg_def(input: &str) -> IResult<&str, ArgDef> {
     ))
 }
 
-fn parse_definition(input: &str) -> IResult<&str, Definition> {
+fn definition(input: &str) -> PResult<Definition> {
     let (input, _) = space0(input)?;
-    dbg!("def", input);
-    let (input, (name, body)) = separated_pair(parse_ident, tag("="), parse_expr)(input)?;
-    dbg!("def after1", input);
+    let (input, (name, body)) = separated_pair(ident, tag("="), expr)(input)?;
     let (input, _) = tag(";")(input)?;
-    dbg!("def after2", input);
     Ok((input, Definition { name, body }))
 }
 
-fn parse_block(input: &str) -> IResult<&str, Block> {
-    dbg!("block", input);
+fn block(input: &str) -> PResult<Block> {
     let (input, _) = space0(input)?;
-    dbg!("block1", input);
     let (input, (definitions, expr)) = delimited(
         tag("{"),
-        pair(many0(parse_definition), parse_expr),
+        pair(many0(definition), expr),
         preceded(space0, tag("}")),
     )(input)?;
     Ok((
@@ -65,11 +60,11 @@ fn parse_block(input: &str) -> IResult<&str, Block> {
     ))
 }
 
-fn parse_block_expr(input: &str) -> IResult<&str, Expr> {
-    map(parse_block, Expr::Block)(input)
+fn block_expr(input: &str) -> PResult<Expr> {
+    map(block, Expr::Block)(input)
 }
 
-fn parse_int_expr(input: &str) -> IResult<&str, Expr> {
+fn int_expr(input: &str) -> PResult<Expr> {
     map(
         map_res(
             delimited(space0, take_while(is_any("0123456789")), space0),
@@ -79,74 +74,88 @@ fn parse_int_expr(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-fn parse_value_expr(input: &str) -> IResult<&str, Expr> {
-    map(parse_ident, Expr::Value)(input)
+fn value_expr(input: &str) -> PResult<Expr> {
+    map(ident, Expr::Value)(input)
 }
 
-fn parse_binary_operator(input: &str) -> IResult<&str, BinaryOperator> {
+fn binary_operator(input: &str) -> PResult<BinaryOperator> {
     map_res(
         delimited(space0, alt((tag("+"), tag("~"), tag("<>"))), space0),
         BinaryOperator::from_str,
     )(input)
 }
 
-fn parse_binary_operation(input: &str) -> IResult<&str, Expr> {
+fn binary_operation(input: &str) -> PResult<Expr> {
     let (input, _) = space0(input)?;
-    dbg!("binop", input);
-    let (input, (left, operator, right)) = delimited(
-        tag("("),
-        tuple((parse_expr, parse_binary_operator, parse_expr)),
-        tag(")"),
-    )(input)?;
+    let (input, (left, operator, right)) =
+        delimited(tag("("), tuple((expr, binary_operator, expr)), tag(")"))(input)?;
     let bo = BinaryOperation {
         left: Box::new(left),
         operator,
         right: Box::new(right),
     };
-    dbg!("binop res", &bo);
     Ok((input, Expr::BinaryOperation(bo)))
 }
 
-fn parse_string_literal(input: &str) -> IResult<&str, String> {
+fn string_literal(input: &str) -> PResult<String> {
     let (input, _) = space0(input)?;
-    dbg!("string", input);
     map(
         delimited(tag("\""), take_until("\""), tag("\"")),
         str::to_owned,
     )(input)
 }
 
-fn parse_string_literal_expr(input: &str) -> IResult<&str, Expr> {
-    map(parse_string_literal, Expr::String)(input)
+fn string_literal_expr(input: &str) -> PResult<Expr> {
+    map(string_literal, Expr::String)(input)
 }
 
-fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    dbg!("expr", input);
+fn function_call(input: &str) -> PResult<FunctionCall> {
+    map(
+        pair(
+            ident,
+            delimited(tag("("), separated_list0(tag(","), expr), tag(")")),
+        ),
+        |(name, arguments)| FunctionCall { name, arguments },
+    )(input)
+}
+
+fn function_call_expr(input: &str) -> PResult<Expr> {
+    map(function_call, Expr::FunctionCall)(input)
+}
+
+fn expr(input: &str) -> PResult<Expr> {
     alt((
-        parse_block_expr,
-        parse_binary_operation,
-        parse_string_literal_expr,
-        parse_int_expr,
-        parse_value_expr,
+        block_expr,
+        function_call_expr,
+        binary_operation,
+        string_literal_expr,
+        int_expr,
+        value_expr,
     ))(input)
 }
 
-pub fn parse_fun(input: &str) -> IResult<&str, Function> {
-    let (input, _) = tag("fun")(input)?;
+pub fn fun(input: &str) -> PResult<Function> {
     let (input, _) = space0(input)?;
-    let (input, name) = parse_ident(input)?;
+    let (input, name) = ident(input)?;
+    let (input, _) = space0(input)?;
+    let (input, _) = tag("=")(input)?;
+    let (input, _) = space0(input)?;
     let (input, args) = delimited(tag("("), take_until(")"), tag(")"))(input)?;
-    let (_, args) = separated_list0(tag(","), parse_arg_def)(args)?;
+    let (_, args) = separated_list0(tag(","), arg_def)(args)?;
     let (input, _) = delimited(space0, tag("->"), space0)(input)?;
     let (input, return_type) = take_until("{")(input)?;
-    let (input, body) = parse_expr(input)?;
+    let (input, body) = expr(input)?;
     Ok((
         input,
         Function {
             name,
-            body,
+            body: Box::new(body),
             return_type: return_type.trim().to_owned(),
             arguments: args,
         },
     ))
+}
+
+pub fn all_funs(input: &str) -> PResult<Vec<Function>> {
+    many0(delimited(space0, fun, space0))(input)
 }

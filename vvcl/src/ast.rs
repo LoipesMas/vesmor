@@ -47,6 +47,26 @@ pub struct BinaryOperation {
 }
 
 #[derive(Debug, Clone)]
+pub struct ArgDef {
+    pub name: Ident,
+    pub typ: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub name: Ident,
+    pub arguments: Vec<ArgDef>,
+    pub return_type: String,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionCall {
+    pub name: Ident,
+    pub arguments: Vec<Expr>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Float(f64),
@@ -54,18 +74,13 @@ pub enum Expr {
     Block(Block),
     Value(Ident),
     BinaryOperation(BinaryOperation),
+    Function(Function),
+    FunctionCall(FunctionCall),
 }
 
-#[derive(Debug)]
-pub struct ArgDef {
-    pub name: Ident,
-    pub typ: String,
-}
-
-#[derive(Debug)]
-pub struct Function {
-    pub name: Ident,
-    pub arguments: Vec<ArgDef>,
-    pub return_type: String,
-    pub body: Expr,
+impl Expr {
+    pub fn is_realized(&self) -> bool {
+        use Expr::*;
+        matches!(self, Int(_) | Float(_) | String(_))
+    }
 }
