@@ -3,7 +3,7 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_till, take_until, take_while},
-    character::complete::{alpha1, space0},
+    character::{complete::space0, is_alphabetic},
     combinator::{map, map_res},
     multi::{many0, separated_list0},
     sequence::{delimited, pair, preceded, separated_pair, tuple},
@@ -16,18 +16,23 @@ use crate::ast::{
 
 type PResult<'a, O> = IResult<&'a str, O>;
 
-fn is_any(s: &'static str) -> impl Fn(char) -> bool {
+fn is_any_of(s: &'static str) -> impl Fn(char) -> bool {
     |e| s.contains([e])
 }
 
+fn is_valid_ident_char(c: char) -> bool {
+    (char::is_ascii(&c) && is_alphabetic(c as u8)) || is_any_of("_")(c)
+}
+
 fn ident(input: &str) -> PResult<Ident> {
-    map(delimited(space0, alpha1, space0), |s: &str| {
-        Ident(s.to_owned())
-    })(input)
+    map(
+        delimited(space0, take_while(is_valid_ident_char), space0),
+        |s: &str| Ident(s.to_owned()),
+    )(input)
 }
 
 fn arg_def(input: &str) -> PResult<ArgDef> {
-    let (input, (name, typ)) = separated_pair(ident, tag(":"), take_till(is_any(",")))(input)?;
+    let (input, (name, typ)) = separated_pair(ident, tag(":"), take_till(is_any_of(",")))(input)?;
     Ok((
         input,
         ArgDef {
@@ -67,7 +72,7 @@ fn block_expr(input: &str) -> PResult<Expr> {
 fn int_expr(input: &str) -> PResult<Expr> {
     map(
         map_res(
-            delimited(space0, take_while(is_any("0123456789")), space0),
+            delimited(space0, take_while(is_any_of("0123456789")), space0),
             |s: &str| s.parse::<i64>(),
         ),
         Expr::Int,
