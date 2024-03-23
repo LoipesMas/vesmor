@@ -1,5 +1,5 @@
 fun hello(a: Int, b: Int) -> Int {
-    z = (y + 10);
+    z = { (y + 10) };
     y = { 
         x = 7;
         (x + (9 + 1))

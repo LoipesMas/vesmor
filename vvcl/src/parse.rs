@@ -6,7 +6,7 @@ use nom::{
     character::complete::{alpha1, space0},
     combinator::{map, map_res},
     multi::{many0, separated_list0},
-    sequence::{delimited, pair, separated_pair, terminated, tuple},
+    sequence::{delimited, pair, preceded, separated_pair, tuple},
     IResult,
 };
 
@@ -51,16 +51,11 @@ fn parse_block(input: &str) -> IResult<&str, Block> {
     dbg!("block", input);
     let (input, _) = space0(input)?;
     dbg!("block1", input);
-    // let (input, (definitions, expr)) = delimited(
-    //     tag("{"),
-    //     pair(many0(parse_definition), parse_expr),
-    //     tag("}"),
-    // )(input)?;
-    let (input, _) = tag("{")(input)?;
-    let (input, definitions) = many0(parse_definition)(input)?;
-    let (input, expr) = parse_expr(input)?;
-    let (input, _) = space0(input)?;
-    let (input, _) = tag("}")(input)?;
+    let (input, (definitions, expr)) = delimited(
+        tag("{"),
+        pair(many0(parse_definition), parse_expr),
+        preceded(space0, tag("}")),
+    )(input)?;
     Ok((
         input,
         Block {
