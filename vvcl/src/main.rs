@@ -1,5 +1,7 @@
-use std::fs;
+use std::{collections::HashMap, fs};
 
+mod ast;
+mod eval;
 mod parse;
 
 fn main() {
@@ -8,5 +10,16 @@ fn main() {
 
     println!("{}", contents);
 
-    dbg!(parse::parse_fun(&contents.replace('\n', "")));
+    let contents = contents.replace('\n', "");
+    let (_input, f) = parse::parse_fun(&contents).unwrap();
+    dbg!(&f.body);
+    let reduced = eval::beta_reduction(&HashMap::new(), f.body);
+    dbg!(&reduced);
+    let arguments = HashMap::from([
+        (ast::Ident("a".to_string()), ast::Expr::Int(100)),
+        (ast::Ident("b".to_string()), ast::Expr::Int(57)),
+        (f.name, reduced.clone()),
+    ]);
+    let applied = eval::beta_reduction(&arguments, reduced);
+    dbg!(&applied);
 }

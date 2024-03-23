@@ -3,57 +3,23 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_till, take_until, take_while},
-    character::{
-        complete::{alpha1, anychar, space0},
-        is_digit,
-    },
+    character::complete::{alpha1, space0},
     combinator::{map, map_res},
     multi::{many0, separated_list0},
-    sequence::{delimited, pair, preceded, separated_pair},
+    sequence::{delimited, pair, separated_pair, terminated, tuple},
     IResult,
 };
 
-#[derive(Debug)]
-pub struct Ident(String);
-
-#[derive(Debug)]
-pub struct Definition {
-    name: String,
-    body: Expr,
-}
-#[derive(Debug)]
-pub struct Block {
-    definitions: Vec<Definition>,
-    expr: Box<Expr>,
-}
-
-#[derive(Debug)]
-pub enum Expr {
-    Int(i64),
-    Float(f64),
-    Block(Block),
-    Value(Ident),
-}
-
-#[derive(Debug)]
-struct ArgDef {
-    name: String,
-    typ: String,
-}
-
-#[derive(Debug)]
-pub struct Function {
-    name: String,
-    arguments: Vec<ArgDef>,
-    return_type: String,
-    body: Expr,
-}
+use crate::ast::{
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident,
+};
 
 fn is_any(s: &'static str) -> impl Fn(char) -> bool {
     |e| s.contains([e])
 }
 
 fn parse_ident(input: &str) -> IResult<&str, Ident> {
+    dbg!("ident", input);
     map(delimited(space0, alpha1, space0), |s: &str| {
         Ident(s.to_owned())
     })(input)
@@ -61,44 +27,40 @@ fn parse_ident(input: &str) -> IResult<&str, Ident> {
 
 fn parse_arg_def(input: &str) -> IResult<&str, ArgDef> {
     let (input, (name, typ)) =
-        separated_pair(take_till(is_any(":")), tag(":"), take_till(is_any(",")))(input)?;
+        separated_pair(parse_ident, tag(":"), take_till(is_any(",")))(input)?;
     Ok((
         input,
         ArgDef {
-            name: name.trim().to_owned(),
+            name,
             typ: typ.trim().to_owned(),
         },
     ))
 }
 
 fn parse_definition(input: &str) -> IResult<&str, Definition> {
-    dbg!(input);
-    let (input, (name, body)) = delimited(
-        space0,
-        separated_pair(take_until("="), tag("="), take_until(";")),
-        tag(";"),
-    )(input)?;
-    dbg!((input, name, &body));
-    let (_, body) = parse_expr(body)?;
-    dbg!((input, name, &body));
-    Ok((
-        input,
-        Definition {
-            name: name.to_owned(),
-            body,
-        },
-    ))
+    let (input, _) = space0(input)?;
+    dbg!("def", input);
+    let (input, (name, body)) = separated_pair(parse_ident, tag("="), parse_expr)(input)?;
+    dbg!("def after1", input);
+    let (input, _) = tag(";")(input)?;
+    dbg!("def after2", input);
+    Ok((input, Definition { name, body }))
 }
 
 fn parse_block(input: &str) -> IResult<&str, Block> {
+    dbg!("block", input);
     let (input, _) = space0(input)?;
-    dbg!(input);
-    let (input, (definitions, expr)) = delimited(
-        tag("{"),
-        pair(many0(parse_definition), parse_expr),
-        tag("}"),
-    )(input)?;
-    dbg!(input);
+    dbg!("block1", input);
+    // let (input, (definitions, expr)) = delimited(
+    //     tag("{"),
+    //     pair(many0(parse_definition), parse_expr),
+    //     tag("}"),
+    // )(input)?;
+    let (input, _) = tag("{")(input)?;
+    let (input, definitions) = many0(parse_definition)(input)?;
+    let (input, expr) = parse_expr(input)?;
+    let (input, _) = space0(input)?;
+    let (input, _) = tag("}")(input)?;
     Ok((
         input,
         Block {
@@ -123,19 +85,47 @@ fn parse_int_expr(input: &str) -> IResult<&str, Expr> {
 }
 
 fn parse_value_expr(input: &str) -> IResult<&str, Expr> {
-    dbg!(input);
     map(parse_ident, Expr::Value)(input)
 }
 
+fn parse_binary_operator(input: &str) -> IResult<&str, BinaryOperator> {
+    map_res(
+        delimited(space0, alt((tag("+"), tag("~"), tag("<>"))), space0),
+        BinaryOperator::from_str,
+    )(input)
+}
+
+fn parse_binary_operation(input: &str) -> IResult<&str, Expr> {
+    let (input, _) = space0(input)?;
+    dbg!("binop", input);
+    let (input, (left, operator, right)) = delimited(
+        tag("("),
+        tuple((parse_expr, parse_binary_operator, parse_expr)),
+        tag(")"),
+    )(input)?;
+    let bo = BinaryOperation {
+        left: Box::new(left),
+        operator,
+        right: Box::new(right),
+    };
+    dbg!("binop res", &bo);
+    Ok((input, Expr::BinaryOperation(bo)))
+}
+
 fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    dbg!(input);
-    alt((parse_block_expr, parse_int_expr, parse_value_expr))(input)
+    dbg!("expr", input);
+    alt((
+        parse_block_expr,
+        parse_binary_operation,
+        parse_int_expr,
+        parse_value_expr,
+    ))(input)
 }
 
 pub fn parse_fun(input: &str) -> IResult<&str, Function> {
     let (input, _) = tag("fun")(input)?;
     let (input, _) = space0(input)?;
-    let (input, name) = take_until("(")(input)?;
+    let (input, name) = parse_ident(input)?;
     let (input, args) = delimited(tag("("), take_until(")"), tag(")"))(input)?;
     let (_, args) = separated_list0(tag(","), parse_arg_def)(args)?;
     let (input, _) = delimited(space0, tag("->"), space0)(input)?;
@@ -144,7 +134,7 @@ pub fn parse_fun(input: &str) -> IResult<&str, Function> {
     Ok((
         input,
         Function {
-            name: name.to_owned(),
+            name,
             body,
             return_type: return_type.trim().to_owned(),
             arguments: args,
