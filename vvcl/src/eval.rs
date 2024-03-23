@@ -51,6 +51,9 @@ fn apply_binary_operation(
 ) -> Expr {
     match (operator, &*left, &*right) {
         (BinaryOperator::IntAdd, &Expr::Int(a), &Expr::Int(b)) => Expr::Int(a + b),
+        (BinaryOperator::StringConcat, Expr::String(ref a), Expr::String(ref b)) => {
+            Expr::String(a.to_owned() + &b)
+        }
         _ => Expr::BinaryOperation(BinaryOperation {
             left,
             operator,

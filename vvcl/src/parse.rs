@@ -112,11 +112,25 @@ fn parse_binary_operation(input: &str) -> IResult<&str, Expr> {
     Ok((input, Expr::BinaryOperation(bo)))
 }
 
+fn parse_string_literal(input: &str) -> IResult<&str, String> {
+    let (input, _) = space0(input)?;
+    dbg!("string", input);
+    map(
+        delimited(tag("\""), take_until("\""), tag("\"")),
+        str::to_owned,
+    )(input)
+}
+
+fn parse_string_literal_expr(input: &str) -> IResult<&str, Expr> {
+    map(parse_string_literal, Expr::String)(input)
+}
+
 fn parse_expr(input: &str) -> IResult<&str, Expr> {
     dbg!("expr", input);
     alt((
         parse_block_expr,
         parse_binary_operation,
+        parse_string_literal_expr,
         parse_int_expr,
         parse_value_expr,
     ))(input)

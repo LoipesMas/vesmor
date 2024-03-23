@@ -50,6 +50,7 @@ pub struct BinaryOperation {
 pub enum Expr {
     Int(i64),
     Float(f64),
+    String(String),
     Block(Block),
     Value(Ident),
     BinaryOperation(BinaryOperation),
