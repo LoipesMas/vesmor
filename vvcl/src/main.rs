@@ -34,8 +34,14 @@ fn main() {
     let file_path = "./test.vvc";
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
-    let contents = contents.replace('\n', "");
-    let (_input, funs) = parse::all_funs(&contents).unwrap();
+    let contents = contents.replace(['\n', ' '], "");
+    let (input, funs) = parse::all_funs(&contents).unwrap();
+
+    if !input.is_empty() {
+        eprintln!("parsing failed! input left:\n{input}");
+        return;
+    }
+
     let mut global_scope = HashMap::new();
     for f in funs {
         let reduced_f = eval::beta_reduction(

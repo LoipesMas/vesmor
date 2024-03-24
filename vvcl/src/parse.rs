@@ -27,10 +27,9 @@ fn is_valid_ident_char(c: char) -> bool {
 }
 
 fn ident(input: &str) -> PResult<Ident> {
-    map(
-        delimited(space0, take_while1(is_valid_ident_char), space0),
-        |s: &str| Ident(s.to_owned()),
-    )(input)
+    map(take_while1(is_valid_ident_char), |s: &str| {
+        Ident(s.to_owned())
+    })(input)
 }
 
 fn arg_def(input: &str) -> PResult<ArgDef> {
@@ -45,19 +44,14 @@ fn arg_def(input: &str) -> PResult<ArgDef> {
 }
 
 fn definition(input: &str) -> PResult<Definition> {
-    let (input, _) = space0(input)?;
     let (input, (name, body)) = separated_pair(ident, tag("="), expr)(input)?;
     let (input, _) = tag(";")(input)?;
     Ok((input, Definition { name, body }))
 }
 
 fn block(input: &str) -> PResult<Block> {
-    let (input, _) = space0(input)?;
-    let (input, (definitions, expr)) = delimited(
-        tag("{"),
-        pair(many0(definition), expr),
-        preceded(space0, tag("}")),
-    )(input)?;
+    let (input, (definitions, expr)) =
+        delimited(tag("{"), pair(many0(definition), expr), tag("}"))(input)?;
     Ok((
         input,
         Block {
@@ -73,10 +67,9 @@ fn block_expr(input: &str) -> PResult<Expr> {
 
 fn int_expr(input: &str) -> PResult<Expr> {
     map(
-        map_res(
-            delimited(space0, take_while(is_any_of("0123456789")), space0),
-            |s: &str| s.parse::<i64>(),
-        ),
+        map_res(take_while(is_any_of("0123456789")), |s: &str| {
+            s.parse::<i64>()
+        }),
         Expr::Int,
     )(input)
 }
@@ -84,14 +77,10 @@ fn int_expr(input: &str) -> PResult<Expr> {
 fn float_expr(input: &str) -> PResult<Expr> {
     map(
         map_res(
-            delimited(
-                space0,
-                separated_pair(
-                    take_while(is_any_of("0123456789")),
-                    tag("."),
-                    take_while(is_any_of("0123456789")),
-                ),
-                space0,
+            separated_pair(
+                take_while(is_any_of("0123456789")),
+                tag("."),
+                take_while(is_any_of("0123456789")),
             ),
             |(p1, p2): (&str, &str)| (p1.to_owned() + "." + p2).parse::<f64>(),
         ),
@@ -111,19 +100,14 @@ macro_rules! alt_tags {
 
 fn binary_operator(input: &str) -> PResult<BinaryOperator> {
     map_res(
-        delimited(
-            space0,
-            // HACK: order of those tags is important:
-            // "+." has to be before "+", otherwise it would never be matched
-            alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~"),
-            space0,
-        ),
+        // HACK: order of those tags is important:
+        // "+." has to be before "+", otherwise it would never be matched
+        alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~"),
         BinaryOperator::from_str,
     )(input)
 }
 
 fn binary_operation(input: &str) -> PResult<Expr> {
-    let (input, _) = space0(input)?;
     let (input, (left, operator, right)) =
         delimited(tag("("), tuple((expr, binary_operator, expr)), tag(")"))(input)?;
     let bo = BinaryOperation {
@@ -135,7 +119,6 @@ fn binary_operation(input: &str) -> PResult<Expr> {
 }
 
 fn string_literal(input: &str) -> PResult<String> {
-    let (input, _) = space0(input)?;
     map(
         delimited(tag("\""), take_until("\""), tag("\"")),
         str::to_owned,
@@ -184,14 +167,11 @@ fn expr(input: &str) -> PResult<Expr> {
 
 pub fn fun(input: &str) -> PResult<Function> {
     // TODO: this should be a standard definition instead
-    let (input, _) = space0(input)?;
     let (input, name) = ident(input)?;
-    let (input, _) = space0(input)?;
     let (input, _) = tag("=")(input)?;
-    let (input, _) = space0(input)?;
     let (input, args) = delimited(tag("("), take_until(")"), tag(")"))(input)?;
     let (_, args) = separated_list0(tag(","), arg_def)(args)?;
-    let (input, _) = delimited(space0, tag("->"), space0)(input)?;
+    let (input, _) = tag("->")(input)?;
     let (input, return_type) = take_until("{")(input)?;
     let (input, body) = expr(input)?;
     let (input, _) = tag(";")(input)?;
@@ -207,5 +187,5 @@ pub fn fun(input: &str) -> PResult<Function> {
 }
 
 pub fn all_funs(input: &str) -> PResult<Vec<Function>> {
-    many0(delimited(space0, fun, space0))(input)
+    many0(fun)(input)
 }
