@@ -171,6 +171,7 @@ fn expr(input: &str) -> PResult<Expr> {
 }
 
 pub fn fun(input: &str) -> PResult<Function> {
+    // TODO: this should be a standard definition instead
     let (input, _) = space0(input)?;
     let (input, name) = ident(input)?;
     let (input, _) = space0(input)?;
@@ -181,6 +182,7 @@ pub fn fun(input: &str) -> PResult<Function> {
     let (input, _) = delimited(space0, tag("->"), space0)(input)?;
     let (input, return_type) = take_until("{")(input)?;
     let (input, body) = expr(input)?;
+    let (input, _) = tag(";")(input)?;
     Ok((
         input,
         Function {
