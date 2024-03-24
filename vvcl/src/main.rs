@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs,
-    time::{Duration, Instant},
-};
+use std::{collections::HashMap, fs, time::Instant};
 
 mod ast;
 mod eval;
@@ -19,11 +15,22 @@ fn ident(s: &str) -> ast::Ident {
     ast::Ident(s.to_owned())
 }
 
+fn get_function_value(expr: ast::Expr) -> Result<String, ()> {
+    if let ast::Expr::Function(fun) = expr {
+        match *fun.body {
+            ast::Expr::Int(v) => Ok(v.to_string()),
+            ast::Expr::Float(v) => Ok(v.to_string()),
+            ast::Expr::String(v) => Ok(v),
+            _ => Err(()),
+        }
+    } else {
+        Err(())
+    }
+}
+
 fn main() {
     let file_path = "./test.vvc";
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
-
-    println!("{}", contents);
 
     let contents = contents.replace('\n', "");
     let (_input, funs) = parse::all_funs(&contents).unwrap();
@@ -43,18 +50,15 @@ fn main() {
     println!("======= final call");
 
     let main_body = global_scope.get(&ident("main")).unwrap();
-    let mut empty_scope = HashMap::new();
-    empty_scope.insert(ident("a"), int_e(1));
-    empty_scope.insert(ident("b"), int_e(10));
-
-    dbg!(main_body);
+    let mut local_scope = HashMap::new();
+    local_scope.insert(ident("a"), int_e(1));
+    local_scope.insert(ident("b"), int_e(10));
 
     let t0 = Instant::now();
 
-    for _ in 0..300000 {
-        let res = eval::beta_reduction(&global_scope, &empty_scope, main_body);
-    }
+    let res = eval::beta_reduction(&global_scope, &local_scope, main_body);
     let t1 = Instant::now();
     dbg!(t1 - t0);
-    // dbg!(res);
+    let fin = get_function_value(res).unwrap();
+    println!("output: {}", fin);
 }
