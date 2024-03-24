@@ -79,6 +79,24 @@ fn int_expr(input: &str) -> PResult<Expr> {
     )(input)
 }
 
+fn float_expr(input: &str) -> PResult<Expr> {
+    map(
+        map_res(
+            delimited(
+                space0,
+                separated_pair(
+                    take_while(is_any_of("0123456789")),
+                    tag("."),
+                    take_while(is_any_of("0123456789")),
+                ),
+                space0,
+            ),
+            |(p1, p2): (&str, &str)| (p1.to_owned() + "." + p2).parse::<f64>(),
+        ),
+        Expr::Float,
+    )(input)
+}
+
 fn value_expr(input: &str) -> PResult<Expr> {
     map(ident, Expr::Value)(input)
 }
@@ -93,7 +111,9 @@ fn binary_operator(input: &str) -> PResult<BinaryOperator> {
     map_res(
         delimited(
             space0,
-            alt_tags!("+", "-", "*", "/", "+.", "-.", "*.", "/.", "~", "<>"),
+            // HACK: order of those tags is important:
+            // "+." has to be before "+", otherwise it would never be matched
+            alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~", "<>"),
             space0,
         ),
         BinaryOperator::from_str,
@@ -144,6 +164,7 @@ fn expr(input: &str) -> PResult<Expr> {
         function_call_expr,
         binary_operation,
         string_literal_expr,
+        float_expr,
         int_expr,
         value_expr,
     ))(input)
