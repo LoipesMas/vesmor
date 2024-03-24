@@ -166,7 +166,7 @@ fn expr(input: &str) -> PResult<Expr> {
 }
 
 pub fn fun(input: &str) -> PResult<Function> {
-    // TODO: this should be a standard definition instead
+    // TODO: this should be a standard `Definition` instead
     let (input, name) = ident(input)?;
     let (input, _) = tag("=")(input)?;
     let (input, args) = delimited(tag("("), take_until(")"), tag(")"))(input)?;

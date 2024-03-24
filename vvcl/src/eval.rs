@@ -16,6 +16,8 @@ impl Scope for TwoScopes<'_> {
     }
 }
 
+// TODO: maybe we could take `Expr` instead of `&Expr`
+// so we wouldn't have to clone so much
 pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
     let combined_scope = (global_scope, local_scope);
@@ -102,7 +104,19 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 Expr::FunctionCall(fc.clone())
             }
         }
-        _ => e.clone(),
+        Expr::Int(_) | Expr::Float(_) | Expr::String(_) => e.clone(),
+        Expr::Record(rec) => {
+            if e.is_realized() {
+                e.clone()
+            } else {
+                let mut rec = rec.clone();
+                for expr in rec.0.values_mut() {
+                    let reduced = beta_reduction(global_scope, local_scope, expr);
+                    *expr = reduced;
+                }
+                Expr::Record(rec)
+            }
+        }
     }
 }
 
