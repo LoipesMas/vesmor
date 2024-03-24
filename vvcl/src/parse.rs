@@ -2,7 +2,7 @@
 
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_till, take_until, take_while},
+    bytes::complete::{tag, take_till, take_until, take_while, take_while1},
     character::{complete::space0, is_alphabetic},
     combinator::{map, map_res},
     multi::{many0, separated_list0},
@@ -26,7 +26,7 @@ fn is_valid_ident_char(c: char) -> bool {
 
 fn ident(input: &str) -> PResult<Ident> {
     map(
-        delimited(space0, take_while(is_valid_ident_char), space0),
+        delimited(space0, take_while1(is_valid_ident_char), space0),
         |s: &str| Ident(s.to_owned()),
     )(input)
 }
