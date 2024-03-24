@@ -5,7 +5,11 @@ main = (a: Int, b: Int) -> Int {
         x = 7;
         (x * (9 + 1))
     };
-    addfour(addfour(v))
+    value = {
+        inner = 10;
+        (y * inner)
+    };
+    addfour(addfour((v + value)))
 }
 
 

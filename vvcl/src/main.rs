@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fs};
+use std::{
+    collections::HashMap,
+    fs,
+    time::{Duration, Instant},
+};
 
 mod ast;
 mod eval;
@@ -36,15 +40,21 @@ fn main() {
         }
     }
 
-    global_scope.insert(ident("a"), int_e(1));
-    global_scope.insert(ident("b"), int_e(10));
-
     println!("======= final call");
 
-    let res = eval::beta_reduction(
-        &global_scope,
-        &HashMap::new(),
-        global_scope.get(&ident("main")).unwrap(),
-    );
-    dbg!(res);
+    let main_body = global_scope.get(&ident("main")).unwrap();
+    let mut empty_scope = HashMap::new();
+    empty_scope.insert(ident("a"), int_e(1));
+    empty_scope.insert(ident("b"), int_e(10));
+
+    dbg!(main_body);
+
+    let t0 = Instant::now();
+
+    for _ in 0..300000 {
+        let res = eval::beta_reduction(&global_scope, &empty_scope, main_body);
+    }
+    let t1 = Instant::now();
+    dbg!(t1 - t0);
+    // dbg!(res);
 }

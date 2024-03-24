@@ -1,23 +1,31 @@
 use crate::ast::{BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident};
 use std::collections::HashMap;
 
-type Scope = HashMap<Ident, Expr>;
+type ScopeMap = HashMap<Ident, Expr>;
 
-fn scope_from_defs(defs: &Vec<Definition>) -> Scope {
-    let mut scope = Scope::new();
+trait Scope {
+    fn get(&self, ident: &Ident) -> Option<&Expr>;
+}
+
+type TwoScopes<'a> = (&'a ScopeMap, &'a ScopeMap);
+
+impl Scope for TwoScopes<'_> {
+    fn get(&self, ident: &Ident) -> Option<&Expr> {
+        self.1.get(ident).or_else(|| self.0.get(ident))
+    }
+}
+
+fn scope_from_defs(defs: &Vec<Definition>) -> ScopeMap {
+    let mut scope = ScopeMap::new();
     for def in defs {
         scope.insert(def.name.clone(), def.body.clone());
     }
     scope
 }
 
-pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
+pub fn beta_reduction(global_scope: &ScopeMap, scope: &ScopeMap, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
-    let combined_scope = {
-        let mut combined_scope = global_scope.clone();
-        combined_scope.extend(scope.to_owned());
-        combined_scope
-    };
+    let combined_scope = (global_scope, scope);
     match e {
         Expr::Block(b) => {
             let mut new_scope = scope.clone();
@@ -25,7 +33,7 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
                 .definitions
                 .iter()
                 .map(|d| Definition {
-                    body: br(&combined_scope, &d.body),
+                    body: br(scope, &d.body),
                     name: d.name.clone(),
                 })
                 .collect();
@@ -43,9 +51,9 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
         }
         Expr::Value(v) => {
             if let Some(e) = combined_scope.get(v) {
-                br(&combined_scope, e)
+                br(scope, e)
             } else {
-                println!("variable not in scope: {}", v.0);
+                // println!("variable not in scope: {}", v.0);
                 Expr::Value(v.clone())
             }
         }
@@ -55,9 +63,9 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
             right,
         }) => {
             let bo = BinaryOperation {
-                left: Box::new(br(&combined_scope, left)),
+                left: Box::new(br(scope, left)),
                 operator: *operator,
-                right: Box::new(br(&combined_scope, right)),
+                right: Box::new(br(scope, right)),
             };
             apply_binary_operation(bo)
         }
@@ -70,13 +78,12 @@ pub fn beta_reduction(global_scope: &Scope, scope: &Scope, e: &Expr) -> Expr {
             name: name.clone(),
             arguments: arguments.clone(),
             return_type: return_type.clone(),
-            body: Box::new(br(&combined_scope, body)),
+            body: Box::new(br(scope, body)),
         }),
         Expr::FunctionCall(fc) => {
             if let Some(fun_expr) = combined_scope.get(&fc.name) {
                 if let Expr::Function(fun) = fun_expr {
-                    let reduced_args =
-                        Vec::from_iter(fc.arguments.iter().map(|a| br(&combined_scope, a)));
+                    let reduced_args = Vec::from_iter(fc.arguments.iter().map(|a| br(scope, a)));
                     if !reduced_args.iter().all(Expr::is_realized) {
                         println!("not reducing FunctionCall, because not all arguments are known!");
                         return e.clone();
