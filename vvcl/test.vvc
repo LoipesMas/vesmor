@@ -1,19 +1,10 @@
 main = (a: Int, b: Int) -> Int {
-    z = { (y / 10) };
-    v = (a+(b-z));
-    y = { 
-        x = 7;
-        (x * (9 + 1))
-    };
-    value = {
-        inner = 10;
-        (y * inner)
-    };
-    addfour(addfour((v + value)))
+    x = a;
+    @rec(x).foo
 };
 
-rec = () -> Record {
-    < x = 5; foo = 1.2; >
+rec = (a: Int) -> Record {
+    < x = 5; foo = (a*7); >
 };
 
 add_two = (a: Int) -> Int {

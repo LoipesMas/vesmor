@@ -80,6 +80,12 @@ pub struct FunctionCall {
 pub struct Record(pub HashMap<Ident, Expr>);
 
 #[derive(Debug, Clone)]
+pub struct RecordAccess {
+    pub record: Box<Expr>,
+    pub member: Ident,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Float(f64),
@@ -90,6 +96,7 @@ pub enum Expr {
     Function(Function),
     FunctionCall(FunctionCall),
     Record(Record),
+    RecordAccess(RecordAccess),
 }
 
 impl Expr {

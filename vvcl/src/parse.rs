@@ -12,7 +12,7 @@ use nom::{
 
 use crate::ast::{
     ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, FunctionCall,
-    Ident, Record,
+    Ident, Record, RecordAccess,
 };
 use crate::utils::map_from_defs;
 
@@ -148,12 +148,27 @@ fn record(input: &str) -> PResult<Record> {
     Ok((input, Record(map_from_defs(definitions))))
 }
 
-pub fn record_expr(input: &str) -> PResult<Expr> {
+fn record_expr(input: &str) -> PResult<Expr> {
     map(record, Expr::Record)(input)
+}
+
+fn record_access(input: &str) -> PResult<RecordAccess> {
+    map(
+        preceded(tag("@"), separated_pair(expr, tag("."), ident)),
+        |(record, member)| RecordAccess {
+            record: Box::new(record),
+            member,
+        },
+    )(input)
+}
+
+fn record_access_expr(input: &str) -> PResult<Expr> {
+    map(record_access, Expr::RecordAccess)(input)
 }
 
 fn expr(input: &str) -> PResult<Expr> {
     alt((
+        record_access_expr,
         block_expr,
         record_expr,
         function_call_expr,

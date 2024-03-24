@@ -59,11 +59,12 @@ fn main() {
 
     let main_body = global_scope.get(&ident("main")).unwrap();
     let mut local_scope = HashMap::new();
-    local_scope.insert(ident("a"), int_e(1));
+    local_scope.insert(ident("a"), int_e(3));
     local_scope.insert(ident("b"), int_e(10));
 
     let t0 = Instant::now();
 
+    dbg!(main_body);
     let res = eval::beta_reduction(&global_scope, &local_scope, main_body);
     let t1 = Instant::now();
     dbg!(t1 - t0);

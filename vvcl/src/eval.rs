@@ -1,4 +1,6 @@
-use crate::ast::{BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident};
+use crate::ast::{
+    BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident, RecordAccess,
+};
 use crate::utils::map_from_defs;
 use std::collections::HashMap;
 
@@ -115,6 +117,21 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                     *expr = reduced;
                 }
                 Expr::Record(rec)
+            }
+        }
+        Expr::RecordAccess(ra) => {
+            let record = br(local_scope, &ra.record);
+            if let Expr::Record(ref r) = record {
+                r.0.get(&ra.member)
+                    .expect("nonexistent key in member")
+                    .clone()
+            } else if ra.record.is_realized() {
+                panic!("expected Record, got {:?}", ra.record)
+            } else {
+                Expr::RecordAccess(RecordAccess {
+                    record: Box::new(record),
+                    member: ra.member.clone(),
+                })
             }
         }
     }
