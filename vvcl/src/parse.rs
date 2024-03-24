@@ -113,7 +113,7 @@ fn binary_operator(input: &str) -> PResult<BinaryOperator> {
             space0,
             // HACK: order of those tags is important:
             // "+." has to be before "+", otherwise it would never be matched
-            alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~", "<>"),
+            alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~"),
             space0,
         ),
         BinaryOperator::from_str,

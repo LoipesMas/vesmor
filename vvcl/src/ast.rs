@@ -41,7 +41,7 @@ impl BinaryOperator {
             "*." => Ok(FloatMul),
             "/." => Ok(FloatDiv),
             "~" => Ok(StringConcat),
-            "<>" => Ok(ListConcat),
+            "~~" => Ok(ListConcat),
             _ => Err(()),
         }
     }
