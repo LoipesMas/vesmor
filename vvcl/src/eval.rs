@@ -1,4 +1,5 @@
 use crate::ast::{BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident};
+use crate::utils::map_from_defs;
 use std::collections::HashMap;
 
 type ScopeMap = HashMap<Ident, Expr>;
@@ -15,21 +16,13 @@ impl Scope for TwoScopes<'_> {
     }
 }
 
-fn scope_from_defs(defs: &Vec<Definition>) -> ScopeMap {
-    let mut scope = ScopeMap::with_capacity(defs.len());
-    for def in defs {
-        scope.insert(def.name.clone(), def.body.clone());
-    }
-    scope
-}
-
 pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
     let combined_scope = (global_scope, local_scope);
     match e {
         Expr::Block(b) => {
             let mut new_scope = local_scope.clone();
-            let reduced_defs = b
+            let reduced_defs: Vec<Definition> = b
                 .definitions
                 .iter()
                 .map(|d| Definition {
@@ -37,7 +30,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                     name: d.name.clone(),
                 })
                 .collect();
-            new_scope.extend(scope_from_defs(&reduced_defs));
+            new_scope.extend(map_from_defs(reduced_defs.clone()));
             let new_expr = br(&new_scope, &b.expr);
             if new_expr.is_realized() {
                 new_expr

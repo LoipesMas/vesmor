@@ -12,6 +12,9 @@ main = (a: Int, b: Int) -> Int {
     addfour(addfour((v + value)))
 };
 
+rec = () -> Record {
+    < x = 5; foo = 1.2; >
+};
 
 add_two = (a: Int) -> Int {
     added = { (0 + 2 )};

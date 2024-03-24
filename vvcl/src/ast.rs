@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Ident(pub String);
 
@@ -75,6 +77,9 @@ pub struct FunctionCall {
 }
 
 #[derive(Debug, Clone)]
+pub struct Record(pub HashMap<Ident, Expr>);
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Float(f64),
@@ -84,11 +89,24 @@ pub enum Expr {
     BinaryOperation(BinaryOperation),
     Function(Function),
     FunctionCall(FunctionCall),
+    Record(Record),
 }
 
 impl Expr {
+    /// Returns `true` if the `Expr` is fully known,
+    /// that is: it doesn't have any references to other values
+    /// and can't be reduced further.
+    ///
+    /// NOTE: assumes the `Expr` is already reduced!
+    ///
+    /// Int(5) => True
+    /// Value("foo") => False
     pub fn is_realized(&self) -> bool {
         use Expr::*;
-        matches!(self, Int(_) | Float(_) | String(_))
+        match self {
+            Expr::Record(r) => r.0.values().all(Expr::is_realized),
+            Int(_) | Float(_) | String(_) => true,
+            _ => false,
+        }
     }
 }

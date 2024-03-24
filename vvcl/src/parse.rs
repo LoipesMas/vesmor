@@ -11,8 +11,10 @@ use nom::{
 };
 
 use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, FunctionCall, Ident,
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, FunctionCall,
+    Ident, Record,
 };
+use crate::utils::map_from_defs;
 
 type PResult<'a, O> = IResult<&'a str, O>;
 
@@ -158,9 +160,19 @@ fn function_call_expr(input: &str) -> PResult<Expr> {
     map(function_call, Expr::FunctionCall)(input)
 }
 
+fn record(input: &str) -> PResult<Record> {
+    let (input, definitions) = delimited(tag("<"), many0(definition), tag(">"))(input)?;
+    Ok((input, Record(map_from_defs(definitions))))
+}
+
+pub fn record_expr(input: &str) -> PResult<Expr> {
+    map(record, Expr::Record)(input)
+}
+
 fn expr(input: &str) -> PResult<Expr> {
     alt((
         block_expr,
+        record_expr,
         function_call_expr,
         binary_operation,
         string_literal_expr,

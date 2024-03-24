@@ -3,6 +3,7 @@ use std::{collections::HashMap, fs, time::Instant};
 mod ast;
 mod eval;
 mod parse;
+mod utils;
 
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
@@ -21,6 +22,7 @@ fn get_function_value(expr: ast::Expr) -> Result<String, ()> {
             ast::Expr::Int(v) => Ok(v.to_string()),
             ast::Expr::Float(v) => Ok(v.to_string()),
             ast::Expr::String(v) => Ok(v),
+            ast::Expr::Record(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
             _ => Err(()),
         }
     } else {
@@ -59,6 +61,7 @@ fn main() {
     let res = eval::beta_reduction(&global_scope, &local_scope, main_body);
     let t1 = Instant::now();
     dbg!(t1 - t0);
+    dbg!(&res);
     let fin = get_function_value(res).unwrap();
     println!("output: {}", fin);
 }
