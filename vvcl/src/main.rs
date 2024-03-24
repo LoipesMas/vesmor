@@ -43,7 +43,10 @@ fn main() {
     }
 
     let mut global_scope = HashMap::new();
-    for f in funs {
+
+    // 1st pass of "compilation"
+    // without global scope
+    for f in &funs {
         let reduced_f = eval::beta_reduction(
             &HashMap::new(),
             &HashMap::new(),
@@ -55,16 +58,33 @@ fn main() {
         }
     }
 
+    // debug
+    let main_body = global_scope.get(&ident("main")).unwrap();
+    dbg!(main_body);
+
+    // 2nd pass of "compilation"
+    // with global scope
+    for f in funs {
+        let reduced_f = eval::beta_reduction(
+            &global_scope,
+            &HashMap::new(),
+            &ast::Expr::Function(f.clone()),
+        );
+        global_scope.insert(f.name.clone(), reduced_f);
+    }
+
+    // debug
+    let main_body = global_scope.get(&ident("main")).unwrap();
+    dbg!(main_body);
+
     println!("======= final call");
 
-    let main_body = global_scope.get(&ident("main")).unwrap();
     let mut local_scope = HashMap::new();
     local_scope.insert(ident("a"), int_e(3));
     local_scope.insert(ident("b"), int_e(10));
 
     let t0 = Instant::now();
 
-    dbg!(main_body);
     let res = eval::beta_reduction(&global_scope, &local_scope, main_body);
     let t1 = Instant::now();
     dbg!(t1 - t0);
