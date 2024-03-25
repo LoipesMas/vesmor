@@ -2,10 +2,10 @@
 
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_till, take_until, take_while, take_while1},
-    character::{complete::space0, is_alphabetic},
-    combinator::{map, map_res},
-    multi::{many0, separated_list0},
+    bytes::complete::{tag, take_till, take_until, take_while},
+    character::{complete::alphanumeric1, is_alphabetic},
+    combinator::{map, map_res, recognize},
+    multi::{many0, many0_count, separated_list0},
     sequence::{delimited, pair, preceded, separated_pair, tuple},
     IResult,
 };
@@ -27,9 +27,13 @@ fn is_valid_ident_char(c: char) -> bool {
 }
 
 fn ident(input: &str) -> PResult<Ident> {
-    map(take_while1(is_valid_ident_char), |s: &str| {
-        Ident(s.to_owned())
-    })(input)
+    map(
+        recognize(pair(
+            alt((nom::character::complete::alpha1, tag("_"))),
+            many0_count(alt((alphanumeric1, tag("_")))),
+        )),
+        |s: &str| Ident(s.to_owned()),
+    )(input)
 }
 
 fn arg_def(input: &str) -> PResult<ArgDef> {
