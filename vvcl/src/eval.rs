@@ -23,6 +23,7 @@ impl Scope for TwoScopes<'_> {
 // so we wouldn't have to clone so much
 pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
+    let brl = |e| beta_reduction(global_scope, local_scope, e);
     let combined_scope = (global_scope, local_scope);
     match e {
         Expr::Block(b) => {
@@ -31,7 +32,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 .definitions
                 .iter()
                 .map(|d| Definition {
-                    body: br(local_scope, &d.body),
+                    body: brl(&d.body),
                     name: d.name.clone(),
                 })
                 .collect();
@@ -49,7 +50,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
         }
         Expr::Value(v) => {
             if let Some(e) = combined_scope.get(v) {
-                br(local_scope, e)
+                brl(e)
             } else {
                 // println!("variable not in scope: {}", v.0);
                 Expr::Value(v.clone())
@@ -61,9 +62,9 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             right,
         }) => {
             let bo = BinaryOperation {
-                left: Box::new(br(local_scope, left)),
+                left: Box::new(brl(left)),
                 operator: *operator,
-                right: Box::new(br(local_scope, right)),
+                right: Box::new(brl(right)),
             };
             apply_binary_operation(bo)
         }
@@ -76,29 +77,29 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             name: name.clone(),
             arguments: arguments.clone(),
             return_type: return_type.clone(),
-            body: Box::new(br(local_scope, body)),
+            body: Box::new(brl(body)),
         }),
         Expr::FunctionCall(fc) => {
             if let Some(fun_expr) = combined_scope.get(&fc.name) {
                 if let Expr::Function(fun) = fun_expr {
-                    let reduced_args =
-                        Vec::from_iter(fc.arguments.iter().map(|a| br(local_scope, a)));
+                    let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
                     if !reduced_args.iter().all(Expr::is_realized) {
                         println!("not reducing FunctionCall, because not all arguments are known!");
-                        return e.clone();
-                    }
-                    let mut inner_scope = HashMap::new();
-                    for (i, arg_expr) in reduced_args.iter().enumerate() {
-                        if let Some(target_arg) = fun.arguments.get(i) {
-                            inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
-                        } else {
-                            panic!(
-                                "Tried to call {} with more arguments that expected!",
-                                fc.name.0
-                            )
+                        e.clone()
+                    } else {
+                        let mut inner_scope = HashMap::new();
+                        for (i, arg_expr) in reduced_args.iter().enumerate() {
+                            if let Some(target_arg) = fun.arguments.get(i) {
+                                inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
+                            } else {
+                                panic!(
+                                    "Tried to call {} with more arguments that expected!",
+                                    fc.name.0
+                                )
+                            }
                         }
+                        br(&inner_scope, &fun.body)
                     }
-                    br(&inner_scope, &fun.body)
                 } else {
                     panic!("Tried to call non-function: {}", fc.name.0);
                 }
@@ -122,7 +123,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             }
         }
         Expr::RecordAccess(ra) => {
-            let record = br(local_scope, &ra.record);
+            let record = brl(&ra.record);
             if let Expr::Record(ref r) = record {
                 r.0.get(&ra.member)
                     .expect("nonexistent key in member")
