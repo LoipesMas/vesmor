@@ -21,6 +21,7 @@ impl Scope for TwoScopes<'_> {
 // TODO: make this return `Result<Expr,_>` instead of panic!king
 // TODO: maybe we could take `Expr` instead of `&Expr`
 // so we wouldn't have to clone so much
+// UPD: I think `&Expr` is faster than `Expr`
 pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
     let brl = |e| beta_reduction(global_scope, local_scope, e);
@@ -128,8 +129,8 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 r.0.get(&ra.member)
                     .expect("nonexistent key in member")
                     .clone()
-            } else if ra.record.is_realized() {
-                panic!("expected Record, got {:?}", ra.record)
+            } else if record.is_realized() {
+                panic!("expected Record, got {:?}", record)
             } else {
                 Expr::RecordAccess(RecordAccess {
                     record: Box::new(record),
