@@ -4,9 +4,9 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_till, take_until, take_while},
     character::{complete::alphanumeric1, is_alphabetic},
-    combinator::{map, map_res, recognize},
+    combinator::{map, map_res, opt, recognize},
     multi::{many0, many0_count, separated_list0},
-    sequence::{delimited, pair, preceded, separated_pair, tuple},
+    sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     IResult,
 };
 
@@ -170,8 +170,20 @@ fn record_access_expr(input: &str) -> PResult<Expr> {
     map(record_access, Expr::RecordAccess)(input)
 }
 
+fn list_expr(input: &str) -> PResult<Expr> {
+    map(
+        delimited(
+            tag("["),
+            terminated(separated_list0(tag(","), expr), opt(tag(","))),
+            tag("]"),
+        ),
+        Expr::List,
+    )(input)
+}
+
 fn expr(input: &str) -> PResult<Expr> {
     alt((
+        list_expr,
         record_access_expr,
         block_expr,
         record_expr,

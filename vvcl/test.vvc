@@ -1,5 +1,7 @@
 main = (a: Int, b: Int) -> Int {
-    int_to_str(addfour(double(a)))
+    x = double(5);
+    z = addfour(x);
+    [1,2, z, (a+b)]
 };
 
 rec = (a: Int) -> Record {

@@ -138,6 +138,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 })
             }
         }
+        Expr::List(exprs) => Expr::List(exprs.iter().map(brl).collect()),
     }
 }
 

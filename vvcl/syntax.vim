@@ -1,6 +1,6 @@
 syn match @operator '[\=\<\>\-+/\*@]'
 
-syn match @punctuation.bracket '[\{\}\(\)\;:,.]'
+syn match @punctuation.bracket '[\[\]\{\}\(\)\;:,.]'
 
 syn match @variable.vvc '[a-z]\w*'
 

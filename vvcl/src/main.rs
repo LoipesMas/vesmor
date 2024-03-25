@@ -25,7 +25,11 @@ fn get_function_value(expr: ast::Expr) -> Result<String, ()> {
             ast::Expr::Float(v) => Ok(v.to_string()),
             ast::Expr::String(v) => Ok(v),
             ast::Expr::Record(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
-            _ => Err(()),
+            ast::Expr::List(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
+            _ => {
+                dbg!(fun.body);
+                Err(())
+            }
         }
     } else {
         Err(())
