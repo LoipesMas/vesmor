@@ -4,7 +4,7 @@ use crate::ast::{
 use crate::utils::map_from_defs;
 use std::collections::HashMap;
 
-type ScopeMap = HashMap<Ident, Expr>;
+pub type ScopeMap = HashMap<Ident, Expr>;
 
 trait Scope {
     fn get(&self, ident: &Ident) -> Option<&Expr>;
@@ -18,6 +18,7 @@ impl Scope for TwoScopes<'_> {
     }
 }
 
+// TODO: make this return `Result<Expr,_>` instead of panic!king
 // TODO: maybe we could take `Expr` instead of `&Expr`
 // so we wouldn't have to clone so much
 pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr) -> Expr {
@@ -106,6 +107,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 Expr::FunctionCall(fc.clone())
             }
         }
+        Expr::BuiltInFunction(bif) => (bif.body)(local_scope),
         Expr::Int(_) | Expr::Float(_) | Expr::String(_) => e.clone(),
         Expr::Record(rec) => {
             if e.is_realized() {

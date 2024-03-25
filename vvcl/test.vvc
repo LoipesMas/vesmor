@@ -1,6 +1,5 @@
 main = (a: Int, b: Int) -> Int {
-    x = a;
-    @rec(x).foo
+    int_to_str(addfour(double(a)))
 };
 
 rec = (a: Int) -> Record {

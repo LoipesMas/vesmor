@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs, time::Instant};
 
 mod ast;
+mod builtin_functions;
 mod eval;
 mod parse;
 mod utils;
@@ -8,6 +9,7 @@ mod utils;
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
 
+#[allow(dead_code)]
 fn str_e(s: &str) -> ast::Expr {
     ast::Expr::String(s.to_owned())
 }
@@ -43,6 +45,10 @@ fn main() {
     }
 
     let mut global_scope = HashMap::new();
+
+    // insert builtin_functions
+    global_scope.insert(ident("double"), builtin_functions::double());
+    global_scope.insert(ident("int_to_str"), builtin_functions::int_to_str());
 
     // 1st pass of "compilation"
     // without global scope

@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use crate::eval::ScopeMap;
+
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Ident(pub String);
 
@@ -70,6 +72,20 @@ pub struct Function {
     pub body: Box<Expr>,
 }
 
+// `BuiltInFunction`s only get access to local_scope
+type BuiltInFunctionClosure = dyn Fn(&ScopeMap) -> Expr;
+
+#[derive(Clone)]
+pub struct BuiltInFunction {
+    pub body: &'static BuiltInFunctionClosure,
+}
+
+impl std::fmt::Debug for BuiltInFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BuiltInFunction").finish()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FunctionCall {
     pub name: Ident,
@@ -94,6 +110,7 @@ pub enum Expr {
     Value(Ident),
     BinaryOperation(BinaryOperation),
     Function(Function),
+    BuiltInFunction(BuiltInFunction),
     FunctionCall(FunctionCall),
     Record(Record),
     RecordAccess(RecordAccess),
