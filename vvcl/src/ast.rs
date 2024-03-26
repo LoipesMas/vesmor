@@ -98,9 +98,40 @@ pub struct Record {
     pub update: HashMap<Ident, Expr>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum RecordAccessError {
+    /// value is there, but not realized
+    Unrealized,
+    /// value is definitely not there
+    Invalid,
+    /// might or might not be there, can't know
+    Unknown,
+}
+
 impl Record {
     pub fn is_realized(&self) -> bool {
         self.base.is_none() && self.update.values().all(Expr::is_realized)
+    }
+
+    pub fn get(&self, ident: &Ident) -> Result<&Expr, RecordAccessError> {
+        use RecordAccessError::*;
+        if let Some(value) = self.update.get(ident) {
+            if value.is_realized() {
+                Ok(value)
+            } else {
+                Err(Unrealized)
+            }
+        } else if let Some(base) = &self.base {
+            if let Expr::Record(ref base) = **base {
+                base.get(ident)
+            } else if base.is_realized() {
+                panic!("Base should be record but is {base:?}")
+            } else {
+                Err(Unknown)
+            }
+        } else {
+            Err(Invalid)
+        }
     }
 }
 

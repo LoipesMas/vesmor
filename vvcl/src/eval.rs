@@ -1,5 +1,6 @@
 use crate::ast::{
-    BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident, Record, RecordAccess,
+    BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident, Record,
+    RecordAccess, RecordAccessError,
 };
 use crate::utils::map_from_defs;
 use std::collections::HashMap;
@@ -149,31 +150,23 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
         Expr::RecordAccess(ra) => {
             let record = brl(&ra.record);
             if let Expr::Record(rec) = record {
-                if rec.is_realized() {
-                    debug_assert!(rec.base.is_none(), "Should be realized!");
-                    rec.update
-                        .get(&ra.member)
-                        .unwrap_or_else(|| {
-                            panic!("Nonexistent member {:?} for record {:?}", ra.member, rec)
-                        })
-                        .clone()
-                } else if let Some(value) = rec.update.get(&ra.member) {
-                    if value.is_realized() {
-                        value.clone()
-                    } else {
-                        Expr::RecordAccess(RecordAccess {
-                            record: Box::new(Expr::Record(rec)),
-                            member: ra.member.clone(),
-                        })
-                    }
-                } else {
-                    Expr::RecordAccess(RecordAccess {
-                        record: Box::new(Expr::Record(rec)),
-                        member: ra.member.clone(),
-                    })
+                match rec.get(&ra.member) {
+                    Ok(v) => v.clone(),
+                    Err(e) => match e {
+                        RecordAccessError::Invalid => {
+                            panic!("Invalid member {:?} for record {:?}", ra.member, rec)
+                        }
+                        RecordAccessError::Unrealized => todo!("How to get here?"),
+                        RecordAccessError::Unknown => todo!("How to get HERE?"),
+                    },
                 }
-            } else {
+            } else if record.is_realized() {
                 panic!("Expected Record, got {:?}", record)
+            } else {
+                Expr::RecordAccess(RecordAccess {
+                    record: Box::new(record),
+                    member: ra.member.clone(),
+                })
             }
         }
         Expr::List(exprs) => Expr::List(exprs.iter().map(brl).collect()),
