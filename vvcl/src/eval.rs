@@ -84,7 +84,10 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             if let Some(fun_expr) = combined_scope.get(&fc.name) {
                 if let Expr::Function(fun) = fun_expr {
                     let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
-                    if !reduced_args.iter().all(Expr::is_realized) {
+                    if reduced_args.is_empty() {
+                        println!("not reducing FunctionCall, because no arguments passed!");
+                        e.clone()
+                    } else if !reduced_args.iter().all(Expr::is_realized) {
                         println!("not reducing FunctionCall, because not all arguments are known!");
                         e.clone()
                     } else {
@@ -99,7 +102,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                                 )
                             }
                         }
-                        br(&inner_scope, &fun.body)
+                        br(&HashMap::new(), &br(&inner_scope, &fun.body))
                     }
                 } else {
                     panic!("Tried to call non-function: {}", fc.name.0);

@@ -131,10 +131,10 @@ impl Expr {
         match self {
             Expr::Record(r) => r.0.values().all(Expr::is_realized),
             List(exprs) => exprs.iter().all(Expr::is_realized),
-            Int(_) | Float(_) | String(_) => true,
+            Int(_) | Float(_) | String(_) | Function(_) => true,
             // explicit so it reminds me when adding new variants
-            Block(_) | Value(_) | BinaryOperation(_) | Function(_) | BuiltInFunction(_)
-            | FunctionCall(_) | RecordAccess(_) => false,
+            Block(_) | Value(_) | BinaryOperation(_) | BuiltInFunction(_) | FunctionCall(_)
+            | RecordAccess(_) => false,
         }
     }
 }

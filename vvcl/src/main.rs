@@ -53,6 +53,7 @@ fn main() {
     // insert builtin_functions
     global_scope.insert(ident("double"), builtin_functions::double());
     global_scope.insert(ident("int_to_str"), builtin_functions::int_to_str());
+    global_scope.insert(ident("list_map"), builtin_functions::list_map());
 
     // 1st pass of "compilation"
     // without global scope

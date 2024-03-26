@@ -1,7 +1,10 @@
+append_zero = (str: String) -> String {
+    (str ~ "0")
+};
+
 main = (a: Int, b: Int) -> Int {
-    x = double(5);
-    z = addfour(x);
-    [1,2, z, (a+b)]
+    prod = (a * b);
+    list_map(list_map([1,2,(a+b), prod], int_to_str), append_zero)
 };
 
 rec = (a: Int) -> Record {
