@@ -148,8 +148,8 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
         }
         Expr::RecordAccess(ra) => {
             let record = brl(&ra.record);
-            if record.is_realized() {
-                if let Expr::Record(rec) = record {
+            if let Expr::Record(rec) = record {
+                if rec.is_realized() {
                     debug_assert!(rec.base.is_none(), "Should be realized!");
                     rec.update
                         .get(&ra.member)
@@ -157,14 +157,23 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                             panic!("Nonexistent member {:?} for record {:?}", ra.member, rec)
                         })
                         .clone()
+                } else if let Some(value) = rec.update.get(&ra.member) {
+                    if value.is_realized() {
+                        value.clone()
+                    } else {
+                        Expr::RecordAccess(RecordAccess {
+                            record: Box::new(Expr::Record(rec)),
+                            member: ra.member.clone(),
+                        })
+                    }
                 } else {
-                    panic!("Expected Record, got {:?}", record)
+                    Expr::RecordAccess(RecordAccess {
+                        record: Box::new(Expr::Record(rec)),
+                        member: ra.member.clone(),
+                    })
                 }
             } else {
-                Expr::RecordAccess(RecordAccess {
-                    record: Box::new(record),
-                    member: ra.member.clone(),
-                })
+                panic!("Expected Record, got {:?}", record)
             }
         }
         Expr::List(exprs) => Expr::List(exprs.iter().map(brl).collect()),
