@@ -148,8 +148,18 @@ fn function_call_expr(input: &str) -> PResult<Expr> {
 }
 
 fn record(input: &str) -> PResult<Record> {
-    let (input, definitions) = delimited(tag("<"), many0(definition), tag(">"))(input)?;
-    Ok((input, Record(map_from_defs(definitions))))
+    let (input, (from, definitions)) = delimited(
+        tag("<"),
+        pair(opt(terminated(expr, tag("|"))), many0(definition)),
+        tag(">"),
+    )(input)?;
+    Ok((
+        input,
+        Record {
+            base: from.map(Box::new),
+            update: map_from_defs(definitions),
+        },
+    ))
 }
 
 fn record_expr(input: &str) -> PResult<Expr> {

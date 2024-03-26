@@ -1,4 +1,4 @@
-syn match @operator '[\=\<\>\-+/\*@]'
+syn match @operator '[\|\=\<\>\-+/\*@]'
 
 syn match @punctuation.bracket '[\[\]\{\}\(\)\;:,.]'
 

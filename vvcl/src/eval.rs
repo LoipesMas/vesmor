@@ -1,5 +1,5 @@
 use crate::ast::{
-    BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident, RecordAccess,
+    BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident, Record, RecordAccess,
 };
 use crate::utils::map_from_defs;
 use std::collections::HashMap;
@@ -120,21 +120,46 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 e.clone()
             } else {
                 let mut rec = rec.clone();
-                for expr in rec.0.values_mut() {
+                for expr in rec.update.values_mut() {
                     let reduced = beta_reduction(global_scope, local_scope, expr);
                     *expr = reduced;
                 }
-                Expr::Record(rec)
+                if let Some(ref from) = rec.base {
+                    let from = brl(from);
+                    if from.is_realized() {
+                        if let Expr::Record(mut from) = from {
+                            debug_assert!(from.base.is_none(), "Should be realized!");
+                            from.update.extend(rec.update);
+                            Expr::Record(Record {
+                                base: None,
+                                update: from.update,
+                            })
+                        } else {
+                            panic!("Expected base record to be Record, got {:?}", from)
+                        }
+                    } else {
+                        rec.base = Some(Box::new(from));
+                        Expr::Record(rec)
+                    }
+                } else {
+                    Expr::Record(rec)
+                }
             }
         }
         Expr::RecordAccess(ra) => {
             let record = brl(&ra.record);
-            if let Expr::Record(ref r) = record {
-                r.0.get(&ra.member)
-                    .expect("nonexistent key in member")
-                    .clone()
-            } else if record.is_realized() {
-                panic!("expected Record, got {:?}", record)
+            if record.is_realized() {
+                if let Expr::Record(rec) = record {
+                    debug_assert!(rec.base.is_none(), "Should be realized!");
+                    rec.update
+                        .get(&ra.member)
+                        .unwrap_or_else(|| {
+                            panic!("Nonexistent member {:?} for record {:?}", ra.member, rec)
+                        })
+                        .clone()
+                } else {
+                    panic!("Expected Record, got {:?}", record)
+                }
             } else {
                 Expr::RecordAccess(RecordAccess {
                     record: Box::new(record),

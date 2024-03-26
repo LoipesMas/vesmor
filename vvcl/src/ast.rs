@@ -93,7 +93,10 @@ pub struct FunctionCall {
 }
 
 #[derive(Debug, Clone)]
-pub struct Record(pub HashMap<Ident, Expr>);
+pub struct Record {
+    pub base: Option<Box<Expr>>,
+    pub update: HashMap<Ident, Expr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct RecordAccess {
@@ -129,7 +132,7 @@ impl Expr {
     pub fn is_realized(&self) -> bool {
         use Expr::*;
         match self {
-            Expr::Record(r) => r.0.values().all(Expr::is_realized),
+            Expr::Record(r) => r.base.is_none() && r.update.values().all(Expr::is_realized),
             List(exprs) => exprs.iter().all(Expr::is_realized),
             Int(_) | Float(_) | String(_) | Function(_) => true,
             // explicit so it reminds me when adding new variants

@@ -3,8 +3,8 @@ append_zero = (str: String) -> String {
 };
 
 main = (a: Int, b: Int) -> Int {
-    prod = (a * b);
-    list_map(list_map([1,2,(a+b), prod], int_to_str), append_zero)
+    x = < foo = 1; bar = 1.2; >;
+    @< <x | z=(a+b);> | foo = 2; biz = 13.37; >.biz
 };
 
 rec = (a: Int) -> Record {
