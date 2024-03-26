@@ -156,7 +156,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                         RecordAccessError::Invalid => {
                             panic!("Invalid member {:?} for record {:?}", ra.member, rec)
                         }
-                        RecordAccessError::Unrealized => todo!("How to get here?"),
+                        RecordAccessError::Unrealized => Expr::RecordAccess(ra.clone()),
                         RecordAccessError::Unknown => todo!("How to get HERE?"),
                     },
                 }
