@@ -56,6 +56,9 @@ fn main() {
     global_scope.insert(ident("double"), builtin_functions::double());
     global_scope.insert(ident("int_to_str"), builtin_functions::int_to_str());
     global_scope.insert(ident("list_map"), builtin_functions::list_map());
+    global_scope.insert(ident("if"), builtin_functions::if_());
+    global_scope.insert(ident("true"), ast::Expr::Bool(true));
+    global_scope.insert(ident("false"), ast::Expr::Bool(false));
 
     // 1st pass of "compilation"
     // without global scope

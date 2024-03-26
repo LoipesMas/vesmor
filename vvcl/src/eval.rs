@@ -115,7 +115,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             }
         }
         Expr::BuiltInFunction(bif) => (bif.body)(local_scope),
-        Expr::Int(_) | Expr::Float(_) | Expr::String(_) => e.clone(),
+        Expr::Int(_) | Expr::Float(_) | Expr::String(_) | Expr::Bool(_) => e.clone(),
         Expr::Record(rec) => {
             if e.is_realized() {
                 e.clone()

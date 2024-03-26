@@ -95,3 +95,46 @@ pub fn list_map() -> Expr {
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
+
+// TODO: this is a HACK
+// we need a if-statement (or match-statement) or generics to do this properly
+pub fn if_() -> Expr {
+    fn body(local_scope: &ScopeMap) -> Expr {
+        let cond = local_scope.get(&Ident("cond".to_owned()));
+        let then = local_scope.get(&Ident("then".to_owned()));
+        let else_ = local_scope.get(&Ident("else".to_owned()));
+        if let (Some(cond), Some(then), Some(else_)) = (cond, then, else_) {
+            if let Expr::Bool(cond) = cond {
+                if *cond {
+                    then.clone()
+                } else {
+                    else_.clone()
+                }
+            } else {
+                panic!("Expected Bool, got {:?}", cond)
+            }
+        } else {
+            if_()
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    Expr::Function(Function {
+        name: Ident("if".to_owned()),
+        arguments: vec![
+            ArgDef {
+                name: Ident("cond".to_owned()),
+                typ: "Bool".to_owned(),
+            },
+            ArgDef {
+                name: Ident("then".to_owned()),
+                typ: "T".to_owned(),
+            },
+            ArgDef {
+                name: Ident("else".to_owned()),
+                typ: "T".to_owned(),
+            },
+        ],
+        return_type: "T".to_owned(),
+        body: Box::new(Expr::BuiltInFunction(bif)),
+    })
+}
