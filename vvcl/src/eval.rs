@@ -22,6 +22,7 @@ impl Scope for TwoScopes<'_> {
 // TODO: maybe we could take `Expr` instead of `&Expr`
 // so we wouldn't have to clone so much
 // UPD: I think `&Expr` is faster than `Expr`
+// maybe Cow would be better here?
 pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr) -> Expr {
     let br = |s, e| beta_reduction(global_scope, s, e);
     let brl = |e| beta_reduction(global_scope, local_scope, e);
