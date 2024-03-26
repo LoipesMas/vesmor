@@ -2,9 +2,9 @@ append_zero = (str: String) -> String {
     (str ~ "0")
 };
 
-main = (a: Int, b: Int) -> Int {
-    x = < foo = 1; bar = 1.2; >;
-    @< <x | z=(a+b);> | foo = 2; biz = 13.37; >.biz
+main = (a: Bool, b: Int) -> Int {
+    z = < res = if (a, addfour(b), b);>;
+    < z | res = @z.res; >
 };
 
 rec = (a: Int) -> Record {
