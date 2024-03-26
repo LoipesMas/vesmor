@@ -97,7 +97,10 @@ pub fn list_map() -> Expr {
 }
 
 // TODO: this is a HACK
-// we need a if-statement (or match-statement) or generics to do this properly
+// we need a if-statement (or match-statement) to do this properly
+// because right now both branches are being evaluated,
+// which causes recursion to not return, ever.
+// a language-level statement could be special-cased in `eval::beta_reduction`
 pub fn if_() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         let cond = local_scope.get(&Ident("cond".to_owned()));
