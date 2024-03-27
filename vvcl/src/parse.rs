@@ -11,8 +11,8 @@ use nom::{
 };
 
 use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, FunctionCall,
-    Ident, Record, RecordAccess,
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumVariant, Expr, Function,
+    FunctionCall, Ident, Record, RecordAccess,
 };
 use crate::utils::map_from_defs;
 
@@ -194,8 +194,22 @@ fn list_expr(input: &str) -> PResult<Expr> {
     )(input)
 }
 
+fn enum_variant_constructor(input: &str) -> PResult<Expr> {
+    map(
+        separated_pair(separated_pair(ident, tag("::"), ident), tag("`"), opt(expr)),
+        |((enu, variant), body)| {
+            Expr::EnumVariant(EnumVariant {
+                enu,
+                variant,
+                body: body.map(Box::new),
+            })
+        },
+    )(input)
+}
+
 fn expr(input: &str) -> PResult<Expr> {
     alt((
+        enum_variant_constructor,
         list_expr,
         record_access_expr,
         block_expr,

@@ -1,5 +1,5 @@
 use crate::ast::{
-    BinaryOperation, BinaryOperator, Block, Definition, Expr, Function, Ident, Record,
+    BinaryOperation, BinaryOperator, Block, Definition, EnumVariant, Expr, Function, Ident, Record,
     RecordAccess, RecordAccessError,
 };
 use crate::utils::map_from_defs;
@@ -170,6 +170,11 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             }
         }
         Expr::List(exprs) => Expr::List(exprs.iter().map(brl).collect()),
+        Expr::EnumVariant(EnumVariant { variant, enu, body }) => Expr::EnumVariant(EnumVariant {
+            enu: enu.clone(),
+            variant: variant.clone(),
+            body: body.as_deref().map(brl).map(Box::new),
+        }),
     }
 }
 

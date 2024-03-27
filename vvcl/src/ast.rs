@@ -150,6 +150,13 @@ pub struct RecordAccess {
 }
 
 #[derive(Debug, Clone)]
+pub struct EnumVariant {
+    pub enu: Ident,
+    pub variant: Ident,
+    pub body: Option<Box<Expr>>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Float(f64),
@@ -164,6 +171,7 @@ pub enum Expr {
     FunctionCall(FunctionCall),
     Record(Record),
     RecordAccess(RecordAccess),
+    EnumVariant(EnumVariant),
 }
 
 impl Expr {
@@ -180,6 +188,10 @@ impl Expr {
         match self {
             Expr::Record(r) => r.is_realized(),
             List(exprs) => exprs.iter().all(Expr::is_realized),
+            Expr::EnumVariant(ev) => match &ev.body {
+                Some(body) => body.is_realized(),
+                None => true,
+            },
             Int(_) | Float(_) | String(_) | Bool(_) | Function(_) => true,
             // explicit so it reminds me when adding new variants
             Block(_) | Value(_) | BinaryOperation(_) | BuiltInFunction(_) | FunctionCall(_)
