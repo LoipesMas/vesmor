@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 
 use crate::{
-    ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall, Ident},
+    ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
+    ident,
 };
 
 pub fn double() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
-        if let Some(a) = local_scope.get(&Ident("a".to_owned())) {
+        if let Some(a) = local_scope.get(&ident("a")) {
             if let Expr::Int(a) = a {
                 Expr::Int(a * 2)
             } else {
@@ -19,9 +20,9 @@ pub fn double() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: Ident("double".to_owned()),
+        name: ident("double"),
         arguments: vec![ArgDef {
-            name: Ident("a".to_owned()),
+            name: ident("a"),
             typ: "Int".to_owned(),
         }],
         return_type: "Int".to_owned(),
@@ -31,7 +32,7 @@ pub fn double() -> Expr {
 
 pub fn int_to_str() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
-        if let Some(a) = local_scope.get(&Ident("a".to_owned())) {
+        if let Some(a) = local_scope.get(&ident("a")) {
             if let Expr::Int(a) = a {
                 Expr::String(a.to_string())
             } else {
@@ -43,9 +44,9 @@ pub fn int_to_str() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: Ident("int_to_str".to_owned()),
+        name: ident("int_to_str"),
         arguments: vec![ArgDef {
-            name: Ident("a".to_owned()),
+            name: ident("a"),
             typ: "Int".to_owned(),
         }],
         return_type: "String".to_owned(),
@@ -56,10 +57,10 @@ pub fn int_to_str() -> Expr {
 pub fn list_map() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         let list = local_scope
-            .get(&Ident("list".to_owned()))
+            .get(&ident("list"))
             .expect("Expected to be called with argument `list`");
         let function = local_scope
-            .get(&Ident("function".to_owned()))
+            .get(&ident("function"))
             .expect("Expected to be called with argument `function`");
         if let (Expr::List(list), Expr::Function(fun)) = (list, function) {
             Expr::List(
@@ -80,14 +81,14 @@ pub fn list_map() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: Ident("list_map".to_owned()),
+        name: ident("list_map"),
         arguments: vec![
             ArgDef {
-                name: Ident("list".to_owned()),
+                name: ident("list"),
                 typ: "List".to_owned(),
             },
             ArgDef {
-                name: Ident("function".to_owned()),
+                name: ident("function"),
                 typ: "Function".to_owned(),
             },
         ],
@@ -103,9 +104,9 @@ pub fn list_map() -> Expr {
 // a language-level statement could be special-cased in `eval::beta_reduction`
 pub fn if_() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
-        let cond = local_scope.get(&Ident("cond".to_owned()));
-        let then = local_scope.get(&Ident("then".to_owned()));
-        let else_ = local_scope.get(&Ident("else".to_owned()));
+        let cond = local_scope.get(&ident("cond"));
+        let then = local_scope.get(&ident("then"));
+        let else_ = local_scope.get(&ident("else"));
         if let (Some(cond), Some(then), Some(else_)) = (cond, then, else_) {
             if let Expr::Bool(cond) = cond {
                 if *cond {
@@ -122,22 +123,31 @@ pub fn if_() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: Ident("if".to_owned()),
+        name: ident("if"),
         arguments: vec![
             ArgDef {
-                name: Ident("cond".to_owned()),
+                name: ident("cond"),
                 typ: "Bool".to_owned(),
             },
             ArgDef {
-                name: Ident("then".to_owned()),
+                name: ident("then"),
                 typ: "T".to_owned(),
             },
             ArgDef {
-                name: Ident("else".to_owned()),
+                name: ident("else"),
                 typ: "T".to_owned(),
             },
         ],
         return_type: "T".to_owned(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
+}
+
+pub fn scope_with_builtin_functions() -> ScopeMap {
+    let mut scope = ScopeMap::new();
+    scope.insert(ident("double"), double());
+    scope.insert(ident("int_to_str"), int_to_str());
+    scope.insert(ident("list_map"), list_map());
+    scope.insert(ident("if"), if_());
+    scope
 }

@@ -5,6 +5,9 @@ mod builtin_functions;
 mod eval;
 mod parse;
 mod utils;
+use utils::ident;
+
+use crate::utils::default_global_scope;
 
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
@@ -12,10 +15,6 @@ const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
 #[allow(dead_code)]
 fn str_e(s: &str) -> ast::Expr {
     ast::Expr::String(s.to_owned())
-}
-
-fn ident(s: &str) -> ast::Ident {
-    ast::Ident(s.to_owned())
 }
 
 fn get_function_value(expr: ast::Expr) -> Result<String, ()> {
@@ -50,15 +49,9 @@ fn main() {
         return;
     }
 
-    let mut global_scope = HashMap::new();
+    let mut global_scope = default_global_scope();
 
     // insert builtin_functions
-    global_scope.insert(ident("double"), builtin_functions::double());
-    global_scope.insert(ident("int_to_str"), builtin_functions::int_to_str());
-    global_scope.insert(ident("list_map"), builtin_functions::list_map());
-    global_scope.insert(ident("if"), builtin_functions::if_());
-    global_scope.insert(ident("true"), ast::Expr::Bool(true));
-    global_scope.insert(ident("false"), ast::Expr::Bool(false));
 
     // 1st pass of "compilation"
     // without global scope
