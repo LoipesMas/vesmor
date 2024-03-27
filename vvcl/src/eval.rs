@@ -90,7 +90,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                         println!("not reducing FunctionCall, because no arguments passed!");
                         e.clone()
                     } else if !reduced_args.iter().all(Expr::is_realized) {
-                        println!("not reducing FunctionCall, because not all arguments are known!");
+                        // println!("not reducing FunctionCall, because not all arguments are known!");
                         e.clone()
                     } else {
                         let mut inner_scope = HashMap::new();
@@ -110,7 +110,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                     panic!("Tried to call non-function: {}", fc.name.0);
                 }
             } else {
-                println!("missing function: {}", &fc.name.0);
+                // println!("missing function: {}", &fc.name.0);
                 Expr::FunctionCall(fc.clone())
             }
         }
@@ -191,7 +191,12 @@ fn apply_binary_operation(
         (FloatSub, &Float(a), &Float(b)) => Float(a - b),
         (FloatMul, &Float(a), &Float(b)) => Float(a * b),
         (FloatDiv, &Float(a), &Float(b)) => Float(a / b),
+        (FloatLT, &Float(a), &Float(b)) => Bool(a < b),
+        (FloatGT, &Float(a), &Float(b)) => Bool(a > b),
         (StringConcat, String(ref a), String(ref b)) => String(a.to_owned() + &b),
+        (ListConcat, List(ref a), List(ref b)) => List(a.iter().chain(b).cloned().collect()),
+        (BoolOr, Bool(a), Bool(b)) => Bool(*a || *b),
+        (BoolAnd, Bool(a), Bool(b)) => Bool(*a && *b),
         (o, a, b) if a.is_realized() && b.is_realized() => {
             panic!("Invalid use of operator: {:?} {:?} {:?}", a, o, b)
         }

@@ -81,12 +81,15 @@ fn int_expr(input: &str) -> PResult<Expr> {
 fn float_expr(input: &str) -> PResult<Expr> {
     map(
         map_res(
-            separated_pair(
-                take_while(is_any_of("0123456789")),
-                tag("."),
-                take_while(is_any_of("0123456789")),
-            ),
-            |(p1, p2): (&str, &str)| (p1.to_owned() + "." + p2).parse::<f64>(),
+            recognize(pair(
+                opt(alt((tag("+"), tag("-")))),
+                separated_pair(
+                    take_while(is_any_of("0123456789")),
+                    tag("."),
+                    take_while(is_any_of("0123456789")),
+                ),
+            )),
+            |s: &str| s.parse::<f64>(),
         ),
         Expr::Float,
     )(input)
@@ -106,7 +109,7 @@ fn binary_operator(input: &str) -> PResult<BinaryOperator> {
     map_res(
         // HACK: order of those tags is important:
         // "+." has to be before "+", otherwise it would never be matched
-        alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~"),
+        alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~", "<.", ">.", "||", "&&"),
         BinaryOperator::from_str,
     )(input)
 }

@@ -3,7 +3,7 @@
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
-    ident,
+    utils::ident,
 };
 
 pub fn double() -> Expr {

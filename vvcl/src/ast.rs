@@ -28,6 +28,10 @@ pub enum BinaryOperator {
     FloatSub,
     FloatMul,
     FloatDiv,
+    FloatLT,
+    FloatGT,
+    BoolOr,
+    BoolAnd,
     StringConcat,
     ListConcat,
 }
@@ -44,8 +48,12 @@ impl BinaryOperator {
             "-." => Ok(FloatSub),
             "*." => Ok(FloatMul),
             "/." => Ok(FloatDiv),
+            "<." => Ok(FloatLT),
+            ">." => Ok(FloatGT),
             "~" => Ok(StringConcat),
             "~~" => Ok(ListConcat),
+            "||" => Ok(BoolOr),
+            "&&" => Ok(BoolAnd),
             _ => Err(()),
         }
     }

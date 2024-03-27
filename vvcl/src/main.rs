@@ -17,24 +17,6 @@ fn str_e(s: &str) -> ast::Expr {
     ast::Expr::String(s.to_owned())
 }
 
-fn get_function_value(expr: ast::Expr) -> Result<String, ()> {
-    if let ast::Expr::Function(fun) = expr {
-        match *fun.body {
-            ast::Expr::Int(v) => Ok(v.to_string()),
-            ast::Expr::Float(v) => Ok(v.to_string()),
-            ast::Expr::String(v) => Ok(v),
-            ast::Expr::Record(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
-            ast::Expr::List(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
-            _ => {
-                dbg!(fun.body);
-                Err(())
-            }
-        }
-    } else {
-        Err(())
-    }
-}
-
 fn main() {
     let file_path = "./test.vvc";
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
@@ -98,6 +80,6 @@ fn main() {
     let t1 = Instant::now();
     dbg!(t1 - t0);
     dbg!(&res);
-    let fin = get_function_value(res).unwrap();
+    let fin = utils::get_function_value(res).unwrap();
     println!("output: {}", fin);
 }

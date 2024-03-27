@@ -1,5 +1,5 @@
-mod ast;
-mod builtin_functions;
-mod eval;
-mod parse;
-mod utils;
+pub mod ast;
+pub mod builtin_functions;
+pub mod eval;
+pub mod parse;
+pub mod utils;

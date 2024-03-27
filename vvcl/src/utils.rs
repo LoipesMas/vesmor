@@ -23,3 +23,21 @@ pub fn default_global_scope() -> ScopeMap {
     scope.insert(ident("false"), Expr::Bool(false));
     scope
 }
+
+pub fn get_function_value(expr: Expr) -> Result<String, ()> {
+    if let Expr::Function(fun) = expr {
+        match *fun.body {
+            Expr::Int(v) => Ok(v.to_string()),
+            Expr::Float(v) => Ok(v.to_string()),
+            Expr::String(v) => Ok(v),
+            Expr::Record(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
+            Expr::List(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
+            _ => {
+                dbg!(fun.body);
+                Err(())
+            }
+        }
+    } else {
+        Err(())
+    }
+}
