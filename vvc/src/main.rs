@@ -20,26 +20,34 @@ fn rec_to_vec2(record: vvcl::ast::Record) -> Vec2 {
     }
 }
 
-fn command_from_record(record: vvcl::ast::Record) -> Command {
-    if let vvcl::ast::Expr::String(s) = record.get(&ident("command")).unwrap() {
-        match s.as_str() {
+fn command_from_record(ev: &vvcl::ast::EnumVariant) -> Command {
+    if ev.enu.0 == "Command" {
+        match ev.variant.0.as_str() {
             "DrawLine" => {
-                let start_rec = record.get(&ident("start")).unwrap();
-                let end_rec = record.get(&ident("end")).unwrap();
-                if let (vvcl::ast::Expr::Record(start_rec), vvcl::ast::Expr::Record(end_rec)) =
-                    (start_rec, end_rec)
-                {
-                    let start = rec_to_vec2(start_rec.clone());
-                    let end = rec_to_vec2(end_rec.clone());
-                    Command::DrawLine { start, end }
+                let body = ev
+                    .body
+                    .as_ref()
+                    .expect("Expected DrawLine body to be present!");
+                if let vvcl::ast::Expr::Record(ref record) = **body {
+                    let start_rec = record.get(&ident("start")).unwrap();
+                    let end_rec = record.get(&ident("end")).unwrap();
+                    if let (vvcl::ast::Expr::Record(start_rec), vvcl::ast::Expr::Record(end_rec)) =
+                        (start_rec, end_rec)
+                    {
+                        let start = rec_to_vec2(start_rec.clone());
+                        let end = rec_to_vec2(end_rec.clone());
+                        Command::DrawLine { start, end }
+                    } else {
+                        panic!("expected records, got {:?}", (start_rec, end_rec))
+                    }
                 } else {
-                    panic!("expected records, got {:?}", (start_rec, end_rec))
+                    panic!("Expected DrawLine body to have a record")
                 }
             }
-            _ => todo!(),
+            _ => panic!("Unknown Command variant {}", ev.variant.0),
         }
     } else {
-        panic!("Expected valid Command, got {record:?}")
+        panic!("Expected Enum Variant of 'Command', got {}", ev.enu.0)
     }
 }
 
@@ -144,10 +152,10 @@ fn update(_app: &App, model: &mut Model, update: Update) {
                 if let vvcl::ast::Expr::List(l) = r.get(&vvcl::utils::ident("commands")).unwrap() {
                     let mut ret = vec![];
                     for command in l {
-                        if let vvcl::ast::Expr::Record(r) = command {
-                            ret.push(command_from_record(r.clone()));
+                        if let vvcl::ast::Expr::EnumVariant(ev) = command {
+                            ret.push(command_from_record(ev));
                         } else {
-                            panic!("expected record with command, got {command:?}")
+                            panic!("expected Enum Variant of Command, got {command:?}")
                         }
                     }
                     ret

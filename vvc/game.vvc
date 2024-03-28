@@ -5,8 +5,16 @@ init = () -> Self {
     >
 };
 
+add_vec2s = (a: Vec2, b: Vec2) -> Vec2 {
+    < x = (@a.x +. @b.x); y = (@a.y +. @b.y);>
+};
+
+mul_vec2_scalar = (vec: Vec2, scalar: Float) -> Vec2 {
+    < x = (@vec.x *. scalar); y = (@vec.y *. scalar);>
+};
+
 draw_line = (start: Vec2, end: Vec2) -> Command {
-    < command = "DrawLine"; start = start; end = end; >
+    Command::DrawLine` < start = start; end = end; >
 };
 
 draw_box = (center: Vec2, size: Float) -> List<Command> {
@@ -26,15 +34,12 @@ draw_bouncer = (position: Vec2) -> List<Command> {
     draw_box(position, 7.0)
 };
 
-draw_borders = (_: Nothing) -> List<Command> {
+draw_borders = (_: Int) -> List<Command> {
     draw_box(< x = 0.0; y = 0.0;>, 300.0)
 };
 
 move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
-    < 
-        x = (@position.x +. (@speed.x *. delta));
-        y = (@position.y +. (@speed.y *. delta));
-    >
+    add_vec2s(position, mul_vec2_scalar(speed, delta))
 };
 
 bounce = (position: Vec2, speed: Vec2) -> Vec2 {
@@ -47,14 +52,12 @@ bounce = (position: Vec2, speed: Vec2) -> Vec2 {
     border_x_l = (-300.0 +. width);
     border_y_u = (300.0 -. width);
     border_y_d = (-300.0 +. width);
-    new_x_speed = if(((x_pos <. border_x_l) || (x_pos >. border_x_r)),
-        (initial_x_speed *. -1.0),
-        initial_x_speed
-        );
-    new_y_speed = if(((y_pos <. border_y_d) || (y_pos >. border_y_u)),
-        (initial_y_speed *. -1.0),
-        initial_y_speed
-        );
+    new_x_speed = ? ((x_pos <. border_x_l) || (x_pos >. border_x_r))
+        | True` => (initial_x_speed *. -1.0)
+        | False` => initial_x_speed;
+    new_y_speed = ? ((y_pos <. border_y_d) || (y_pos >. border_y_u))
+        | True` => (initial_y_speed *. -1.0)
+        | False` => initial_y_speed ;
     < x = new_x_speed; y = new_y_speed;>
 };
 
