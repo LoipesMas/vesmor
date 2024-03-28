@@ -3,8 +3,7 @@ append_zero = (str: String) -> String {
 };
 
 main = (a: Bool, b: Int) -> Option<Record> {
-    z = < res = if (a, addfour(b), b);>;
-    Option::Some` < z | res = @z.res; >
+    ? Option::Some` 5 | Some` x => < foo = (x * b); > | None` => Option::None`
 };
 
 rec = (a: Int) -> Record {

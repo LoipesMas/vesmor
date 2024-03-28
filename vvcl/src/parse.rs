@@ -5,14 +5,14 @@ use nom::{
     bytes::complete::{tag, take_till, take_until, take_while},
     character::{complete::alphanumeric1, is_alphabetic},
     combinator::{map, map_res, opt, recognize},
-    multi::{many0, many0_count, separated_list0},
+    multi::{many0, many0_count, many1, separated_list0},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     IResult,
 };
 
 use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumVariant, Expr, Function,
-    FunctionCall, Ident, Record, RecordAccess,
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumVariant, Expr,
+    Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
 };
 use crate::utils::map_from_defs;
 
@@ -207,9 +207,36 @@ fn enum_variant_constructor(input: &str) -> PResult<Expr> {
     )(input)
 }
 
+fn enum_matching_branch(input: &str) -> PResult<MatchBranch> {
+    map(
+        preceded(
+            tag("|"),
+            separated_pair(separated_pair(ident, tag("`"), opt(ident)), tag("=>"), expr),
+        ),
+        |((variant, bind), expr)| MatchBranch {
+            variant,
+            bind,
+            expr: Box::new(expr),
+        },
+    )(input)
+}
+
+fn enum_matching_expr(input: &str) -> PResult<Expr> {
+    map(
+        preceded(tag("?"), pair(expr, many1(enum_matching_branch))),
+        |(value, branches)| {
+            Expr::EnumMatching(EnumMatching {
+                value: Box::new(value),
+                branches,
+            })
+        },
+    )(input)
+}
+
 fn expr(input: &str) -> PResult<Expr> {
     alt((
         enum_variant_constructor,
+        enum_matching_expr,
         list_expr,
         record_access_expr,
         block_expr,

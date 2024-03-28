@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryOperation, BinaryOperator, Block, Definition, EnumVariant, Expr, Function, Ident, Record,
-    RecordAccess, RecordAccessError,
+    BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumVariant, Expr, Function,
+    Ident, Record, RecordAccess, RecordAccessError,
 };
 use crate::utils::map_from_defs;
 use std::collections::HashMap;
@@ -175,6 +175,51 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             variant: variant.clone(),
             body: body.as_deref().map(brl).map(Box::new),
         }),
+        Expr::EnumMatching(em) => {
+            let value = brl(&em.value);
+            if value.is_realized() {
+                if let Expr::EnumVariant(ev) = value {
+                    if let Some(branch) = em
+                        .branches
+                        .iter()
+                        .find(|branch| branch.variant == ev.variant)
+                    {
+                        if let Some(bind_ident) = &branch.bind {
+                            if let Some(ev_body) = ev.body {
+                                // bind enum body
+                                let definition = Definition {
+                                    name: bind_ident.clone(),
+                                    body: *ev_body,
+                                };
+                                let block = Expr::Block(Block {
+                                    definitions: vec![definition],
+                                    expr: branch.expr.clone(),
+                                });
+                                brl(&block)
+                            } else {
+                                // tried to bind, failed
+                                panic!("Tried to bind enum body, but enum haven't got one. {ev:?}")
+                            }
+                        } else if ev.body.is_none() {
+                            // nothing to bind, didn't try
+                            brl(&branch.expr)
+                        } else {
+                            // tried not to bind, failed
+                            panic!("Enum body was not bound {ev:?}")
+                        }
+                    } else {
+                        panic!("None of the branches matched {ev:?}")
+                    }
+                } else {
+                    panic!("Expected EnumVariant, got {value:?}")
+                }
+            } else {
+                Expr::EnumMatching(EnumMatching {
+                    value: Box::new(value),
+                    branches: em.branches.clone(),
+                })
+            }
+        }
     }
 }
 

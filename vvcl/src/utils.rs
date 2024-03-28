@@ -19,6 +19,8 @@ pub fn ident(s: &str) -> Ident {
 pub fn default_global_scope() -> ScopeMap {
     let mut scope = ScopeMap::new();
     scope.extend(scope_with_builtin_functions());
+    // TODO: maybe having true and false be enums (Bool::True) would be better?
+    // we could then remove `if` function and use pattern matching
     scope.insert(ident("true"), Expr::Bool(true));
     scope.insert(ident("false"), Expr::Bool(false));
     scope
