@@ -11,8 +11,8 @@ use nom::{
 };
 
 use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumVariant, Expr,
-    Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
+    EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
 };
 use crate::utils::map_from_defs;
 
@@ -207,15 +207,21 @@ fn enum_variant_constructor(input: &str) -> PResult<Expr> {
     )(input)
 }
 
+fn enum_pattern(input: &str) -> PResult<EnumPattern> {
+    alt((
+        map(
+            separated_pair(ident, tag("`"), opt(ident)),
+            |(variant, bind)| EnumPattern::Variant { variant, bind },
+        ),
+        map(ident, |bind| EnumPattern::Any { bind }),
+    ))(input)
+}
+
 fn enum_matching_branch(input: &str) -> PResult<MatchBranch> {
     map(
-        preceded(
-            tag("|"),
-            separated_pair(separated_pair(ident, tag("`"), opt(ident)), tag("=>"), expr),
-        ),
-        |((variant, bind), expr)| MatchBranch {
-            variant,
-            bind,
+        preceded(tag("|"), separated_pair(enum_pattern, tag("=>"), expr)),
+        |(pattern, expr)| MatchBranch {
+            pattern,
             expr: Box::new(expr),
         },
     )(input)

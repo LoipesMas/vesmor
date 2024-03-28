@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::{eval::ScopeMap, utils::ident};
+use crate::eval::ScopeMap;
 
 // TODO: try changing Box for Rc and test performance
 
@@ -159,15 +159,23 @@ pub struct EnumVariant {
 }
 
 #[derive(Debug, Clone)]
+pub enum EnumPattern {
+    Variant { variant: Ident, bind: Option<Ident> },
+    Any { bind: Ident },
+}
+
+#[derive(Debug, Clone)]
 pub struct MatchBranch {
-    pub variant: Ident,
-    pub bind: Option<Ident>,
+    pub pattern: EnumPattern,
     pub expr: Box<Expr>,
 }
 
 impl MatchBranch {
-    pub fn matches(&self, enu: EnumVariant) -> bool {
-        enu.variant == self.variant
+    pub fn matches(&self, enu: &EnumVariant) -> bool {
+        match &self.pattern {
+            EnumPattern::Variant { variant, bind: _ } => variant == &enu.variant,
+            EnumPattern::Any { bind: _ } => true,
+        }
     }
 }
 
