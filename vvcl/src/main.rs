@@ -71,7 +71,7 @@ fn main() {
     println!("======= final call");
 
     let mut local_scope = HashMap::new();
-    local_scope.insert(ident("a"), ast::Expr::Bool(false));
+    local_scope.insert(ident("a"), utils::bool_to_enum(true));
     local_scope.insert(ident("b"), int_e(10));
 
     let t0 = Instant::now();

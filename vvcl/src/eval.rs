@@ -2,7 +2,7 @@ use crate::ast::{
     BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumVariant, Expr, Function,
     Ident, Record, RecordAccess, RecordAccessError,
 };
-use crate::utils::map_from_defs;
+use crate::utils::{bool_to_enum, enum_to_bool, map_from_defs};
 use std::collections::HashMap;
 
 pub type ScopeMap = HashMap<Ident, Expr>;
@@ -115,7 +115,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             }
         }
         Expr::BuiltInFunction(bif) => (bif.body)(local_scope),
-        Expr::Int(_) | Expr::Float(_) | Expr::String(_) | Expr::Bool(_) => e.clone(),
+        Expr::Int(_) | Expr::Float(_) | Expr::String(_) => e.clone(),
         Expr::Record(rec) => {
             if e.is_realized() {
                 e.clone()
@@ -241,12 +241,16 @@ fn apply_binary_operation(
         (FloatSub, &Float(a), &Float(b)) => Float(a - b),
         (FloatMul, &Float(a), &Float(b)) => Float(a * b),
         (FloatDiv, &Float(a), &Float(b)) => Float(a / b),
-        (FloatLT, &Float(a), &Float(b)) => Bool(a < b),
-        (FloatGT, &Float(a), &Float(b)) => Bool(a > b),
+        (FloatLT, &Float(a), &Float(b)) => bool_to_enum(a < b),
+        (FloatGT, &Float(a), &Float(b)) => bool_to_enum(a > b),
         (StringConcat, String(ref a), String(ref b)) => String(a.to_owned() + &b),
         (ListConcat, List(ref a), List(ref b)) => List(a.iter().chain(b).cloned().collect()),
-        (BoolOr, Bool(a), Bool(b)) => Bool(*a || *b),
-        (BoolAnd, Bool(a), Bool(b)) => Bool(*a && *b),
+        (BoolOr, EnumVariant(a), EnumVariant(b)) => {
+            bool_to_enum(enum_to_bool(a) || enum_to_bool(b))
+        }
+        (BoolAnd, EnumVariant(a), EnumVariant(b)) => {
+            bool_to_enum(enum_to_bool(a) && enum_to_bool(b))
+        }
         (o, a, b) if a.is_realized() && b.is_realized() => {
             panic!("Invalid use of operator: {:?} {:?} {:?}", a, o, b)
         }

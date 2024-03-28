@@ -97,57 +97,10 @@ pub fn list_map() -> Expr {
     })
 }
 
-// TODO: this is a HACK
-// we need a if-statement (or match-statement) to do this properly
-// because right now both branches are being evaluated,
-// which causes recursion to not return, ever.
-// a language-level statement could be special-cased in `eval::beta_reduction`
-pub fn if_() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
-        let cond = local_scope.get(&ident("cond"));
-        let then = local_scope.get(&ident("then"));
-        let else_ = local_scope.get(&ident("else"));
-        if let (Some(cond), Some(then), Some(else_)) = (cond, then, else_) {
-            if let Expr::Bool(cond) = cond {
-                if *cond {
-                    then.clone()
-                } else {
-                    else_.clone()
-                }
-            } else {
-                panic!("Expected Bool, got {:?}", cond)
-            }
-        } else {
-            if_()
-        }
-    }
-    let bif = BuiltInFunction { body: &body };
-    Expr::Function(Function {
-        name: ident("if"),
-        arguments: vec![
-            ArgDef {
-                name: ident("cond"),
-                typ: "Bool".to_owned(),
-            },
-            ArgDef {
-                name: ident("then"),
-                typ: "T".to_owned(),
-            },
-            ArgDef {
-                name: ident("else"),
-                typ: "T".to_owned(),
-            },
-        ],
-        return_type: "T".to_owned(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
-    })
-}
-
 pub fn scope_with_builtin_functions() -> ScopeMap {
     let mut scope = ScopeMap::new();
     scope.insert(ident("double"), double());
     scope.insert(ident("int_to_str"), int_to_str());
     scope.insert(ident("list_map"), list_map());
-    scope.insert(ident("if"), if_());
     scope
 }

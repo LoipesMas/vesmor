@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{Definition, Expr, Ident},
+    ast::{Definition, EnumVariant, Expr, Ident},
     builtin_functions::scope_with_builtin_functions,
     eval::ScopeMap,
 };
@@ -19,10 +19,6 @@ pub fn ident(s: &str) -> Ident {
 pub fn default_global_scope() -> ScopeMap {
     let mut scope = ScopeMap::new();
     scope.extend(scope_with_builtin_functions());
-    // TODO: maybe having true and false be enums (Bool::True) would be better?
-    // we could then remove `if` function and use pattern matching
-    scope.insert(ident("true"), Expr::Bool(true));
-    scope.insert(ident("false"), Expr::Bool(false));
     scope
 }
 
@@ -42,5 +38,30 @@ pub fn get_function_value(expr: Expr) -> Result<String, ()> {
         }
     } else {
         Err(())
+    }
+}
+
+pub fn bool_to_enum(v: bool) -> Expr {
+    let variant_str = match v {
+        true => "True",
+        false => "False",
+    }
+    .to_string();
+    Expr::EnumVariant(EnumVariant {
+        enu: ident("Bool"),
+        variant: Ident(variant_str),
+        body: None,
+    })
+}
+
+pub fn enum_to_bool(ev: &EnumVariant) -> bool {
+    if ev.enu.0 == "Bool" {
+        match ev.variant.0.as_str() {
+            "True" => true,
+            "False" => false,
+            _ => panic!("Unexpected Bool variant: {ev:?}"),
+        }
+    } else {
+        panic!("Expected `Bool` enum, got {ev:?}")
     }
 }

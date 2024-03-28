@@ -182,7 +182,6 @@ pub enum Expr {
     Int(i64),
     Float(f64),
     String(String),
-    Bool(bool),
     List(Vec<Expr>),
     Block(Block),
     Value(Ident),
@@ -214,7 +213,7 @@ impl Expr {
                 Some(body) => body.is_realized(),
                 None => true,
             },
-            Int(_) | Float(_) | String(_) | Bool(_) | Function(_) => true,
+            Int(_) | Float(_) | String(_) | Function(_) => true,
             // explicit so it reminds me when adding new variants
             Block(_) | Value(_) | BinaryOperation(_) | BuiltInFunction(_) | FunctionCall(_)
             | RecordAccess(_) | EnumMatching(_) => false,

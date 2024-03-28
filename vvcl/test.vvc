@@ -2,8 +2,10 @@ append_zero = (str: String) -> String {
     (str ~ "0")
 };
 
-main = (a: Bool, b: Int) -> Option<Record> {
-    ? Option::Some` 5 | Some` x => < foo = (x * b); > | None` => Option::None`
+main = (a: Bool, b: Int) -> Int {
+    ? a
+    | False` => 0
+    | True` => 1
 };
 
 rec = (a: Int) -> Record {
