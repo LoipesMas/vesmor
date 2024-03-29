@@ -219,7 +219,11 @@ fn enum_pattern(input: &str) -> PResult<EnumPattern> {
 
 fn enum_matching_branch(input: &str) -> PResult<MatchBranch> {
     map(
-        preceded(tag("|"), separated_pair(enum_pattern, tag("=>"), expr)),
+        delimited(
+            tag("|"),
+            separated_pair(enum_pattern, tag("=>"), expr),
+            tag(";"),
+        ),
         |(pattern, expr)| MatchBranch {
             pattern,
             expr: Box::new(expr),
