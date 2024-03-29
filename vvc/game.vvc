@@ -5,6 +5,10 @@ init = () -> Self {
     >
 };
 
+vec2 = (x: Float, y: Float) -> Vec2 {
+    < x = x; y = y;>
+};
+
 add_vec2s = (a: Vec2, b: Vec2) -> Vec2 {
     < x = (@a.x +. @b.x); y = (@a.y +. @b.y);>
 };
@@ -53,15 +57,17 @@ bounce = (position: Vec2, speed: Vec2) -> Vec2 {
     border_y_u = (300.0 -. width);
     border_y_d = (-300.0 +. width);
     new_x_speed = ? ((x_pos <. border_x_l) || (x_pos >. border_x_r))
-        | True` => (initial_x_speed *. -1.0)
+        | True` => (initial_x_speed *. -1.0);
         | False` => initial_x_speed;
+        ;
     new_y_speed = ? ((y_pos <. border_y_d) || (y_pos >. border_y_u))
-        | True` => (initial_y_speed *. -1.0)
+        | True` => (initial_y_speed *. -1.0);
         | False` => initial_y_speed ;
+        ;
     < x = new_x_speed; y = new_y_speed;>
 };
 
-update = (self: Self, delta: Float) -> SelfAndCommands {
+update_handler = (self: Self, delta: Float) -> SelfAndCommands {
     moved_pos = move(@self.position, @self.speed, delta);
     bounced_speed = bounce(moved_pos, @self.speed);
     commands = (draw_bouncer(@self.position) ~~ draw_borders(0));
@@ -69,4 +75,15 @@ update = (self: Self, delta: Float) -> SelfAndCommands {
     self = < self | position = moved_pos; speed = bounced_speed; >;
     commands = commands;
     >
+};
+
+event_handler = (self: Self, event: Event) -> SelfAndCommands {
+    new_self = ? event
+        | KeyPressed` key => ? key
+            | G` => < self | position = vec2(0.0,0.0);>;
+            | _ => self;
+            ;
+        | _ => self;
+        ;
+    <self = new_self; commands = [];>
 };

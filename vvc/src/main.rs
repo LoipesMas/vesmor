@@ -2,7 +2,7 @@ use nannou::prelude::*;
 use vvcl::utils::ident;
 
 fn main() {
-    nannou::app(model).update(update).simple_window(view).run();
+    nannou::app(model).update(update).view(view).run();
 }
 
 enum Command {
@@ -62,6 +62,7 @@ struct Runtime {
     global_scope: vvcl::eval::ScopeMap,
     game_state: vvcl::ast::Expr,
     update_function: vvcl::ast::Expr,
+    event_function: vvcl::ast::Expr,
 }
 
 fn init_runtime() -> Runtime {
@@ -114,7 +115,11 @@ fn init_runtime() -> Runtime {
         panic!("init should be a function! got {init_fun:?}")
     };
     let update_function = global_scope
-        .get(&vvcl::utils::ident("update"))
+        .get(&vvcl::utils::ident("update_handler"))
+        .unwrap()
+        .clone();
+    let event_function = global_scope
+        .get(&vvcl::utils::ident("event_handler"))
         .unwrap()
         .clone();
 
@@ -122,10 +127,44 @@ fn init_runtime() -> Runtime {
         global_scope,
         game_state,
         update_function,
+        event_function,
     }
 }
+fn key_pressed(app: &App, model: &mut Model, key: Key) {
+    let key_str = format!("{key:?}");
+    let key_enum = vvcl::ast::Expr::EnumVariant(vvcl::ast::EnumVariant {
+        enu: ident("Key"),
+        variant: ident(&key_str),
+        body: None,
+    });
+    let event_enum = vvcl::ast::Expr::EnumVariant(vvcl::ast::EnumVariant {
+        enu: ident("Event"),
+        variant: ident("KeyPressed"),
+        body: Some(Box::new(key_enum)),
+    });
 
-fn model(_app: &App) -> Model {
+    let mut local_scope = vvcl::eval::ScopeMap::new();
+    local_scope.insert(vvcl::utils::ident("event"), event_enum);
+    local_scope.insert(vvcl::utils::ident("self"), model.runtime.game_state.clone());
+
+    let evaled = vvcl::eval::beta_reduction(
+        &model.runtime.global_scope,
+        &local_scope,
+        &model.runtime.event_function,
+    );
+
+    let (game_state, commands) = extract_state_and_commands(evaled);
+    model.runtime.game_state = game_state;
+    model.commands = commands;
+}
+
+fn model(app: &App) -> Model {
+    app.new_window()
+        .size(720, 720)
+        .key_pressed(key_pressed)
+        .build()
+        .unwrap();
+
     Model {
         color: GREEN,
         line_weight: 4.0,
@@ -134,18 +173,8 @@ fn model(_app: &App) -> Model {
     }
 }
 
-fn update(_app: &App, model: &mut Model, update: Update) {
-    let delta = update.since_last.as_secs_f64();
-    let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(vvcl::utils::ident("delta"), vvcl::ast::Expr::Float(delta));
-    local_scope.insert(vvcl::utils::ident("self"), model.runtime.game_state.clone());
-
-    let updated = vvcl::eval::beta_reduction(
-        &model.runtime.global_scope,
-        &local_scope,
-        &model.runtime.update_function,
-    );
-    let (game_state, commands) = if let vvcl::ast::Expr::Function(f) = updated {
+fn extract_state_and_commands(function: vvcl::ast::Expr) -> (vvcl::ast::Expr, Vec<Command>) {
+    if let vvcl::ast::Expr::Function(f) = function {
         if let vvcl::ast::Expr::Record(r) = *f.body {
             let game_state = r.get(&vvcl::utils::ident("self")).unwrap().clone();
             let commands =
@@ -169,7 +198,22 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     } else {
         // this should be unreachable, unless I made some mistakes ;p
         unreachable!()
-    };
+    }
+}
+
+fn update(_app: &App, model: &mut Model, update: Update) {
+    let delta = update.since_last.as_secs_f64();
+    let mut local_scope = vvcl::eval::ScopeMap::new();
+    local_scope.insert(vvcl::utils::ident("delta"), vvcl::ast::Expr::Float(delta));
+    local_scope.insert(vvcl::utils::ident("self"), model.runtime.game_state.clone());
+
+    let updated = vvcl::eval::beta_reduction(
+        &model.runtime.global_scope,
+        &local_scope,
+        &model.runtime.update_function,
+    );
+
+    let (game_state, commands) = extract_state_and_commands(updated);
 
     model.runtime.game_state = game_state;
     model.commands = commands;
