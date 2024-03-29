@@ -47,11 +47,7 @@ pub fn bool_to_enum(v: bool) -> Expr {
         false => "False",
     }
     .to_string();
-    Expr::EnumVariant(EnumVariant {
-        enu: ident("Bool"),
-        variant: Ident(variant_str),
-        body: None,
-    })
+    enum_variant("Bool", &variant_str, None)
 }
 
 pub fn enum_to_bool(ev: &EnumVariant) -> bool {
@@ -64,4 +60,17 @@ pub fn enum_to_bool(ev: &EnumVariant) -> bool {
     } else {
         panic!("Expected `Bool` enum, got {ev:?}")
     }
+}
+
+pub fn enum_variant(enu: &str, variant: &str, body: Option<Expr>) -> Expr {
+    Expr::EnumVariant(EnumVariant {
+        enu: ident(enu),
+        variant: ident(variant),
+        body: body.map(Box::new),
+    })
+}
+
+pub fn expr_option_to_enum(body: Option<Expr>) -> Expr {
+    let variant_str = if body.is_some() { "Some" } else { "None" };
+    enum_variant("Option", variant_str, body)
 }

@@ -3,9 +3,7 @@ append_zero = (str: String) -> String {
 };
 
 main = (a: Bool, b: Int) -> Int {
-    ? a
-    | False` => 0;
-    | True` => 1;
+    list_get([1,2,3], 2)
 };
 
 rec = (a: Int) -> Record {

@@ -3,7 +3,7 @@
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
-    utils::ident,
+    utils::{enum_variant, expr_option_to_enum, ident},
 };
 
 pub fn double() -> Expr {
@@ -97,10 +97,43 @@ pub fn list_map() -> Expr {
     })
 }
 
+pub fn list_get() -> Expr {
+    fn body(local_scope: &ScopeMap) -> Expr {
+        let list = local_scope
+            .get(&ident("list"))
+            .expect("Expected to be called with argument `list`");
+        let idx = local_scope
+            .get(&ident("idx"))
+            .expect("Expected to be called with argument `idx`");
+        if let (Expr::List(list), Expr::Int(idx)) = (list, idx) {
+            expr_option_to_enum(list.get(*idx as usize).cloned())
+        } else {
+            panic!("Expected List and Int, got {:?} and {:?}", list, idx)
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    Expr::Function(Function {
+        name: ident("list_get"),
+        arguments: vec![
+            ArgDef {
+                name: ident("list"),
+                typ: "List".to_owned(),
+            },
+            ArgDef {
+                name: ident("idx"),
+                typ: "Int".to_owned(),
+            },
+        ],
+        return_type: "Option<Int>".to_owned(),
+        body: Box::new(Expr::BuiltInFunction(bif)),
+    })
+}
+
 pub fn scope_with_builtin_functions() -> ScopeMap {
     let mut scope = ScopeMap::new();
     scope.insert(ident("double"), double());
     scope.insert(ident("int_to_str"), int_to_str());
     scope.insert(ident("list_map"), list_map());
+    scope.insert(ident("list_get"), list_get());
     scope
 }
