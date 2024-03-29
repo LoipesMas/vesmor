@@ -1,8 +1,26 @@
 init = () -> Self {
     <
-    position = <x=0.0;y=0.0;>;
-    speed = < x = 167.0; y = -200.0;>;
+    position = < x = 0.0; y = 0.0; >;
+    speed = < x = 167.0; y = -200.0; >;
     >
+};
+
+min = (a: Float, b: Float) -> Float {
+    ? (a <. b)
+    | True` => a;
+    | False` => b;
+};
+
+max = (a: Float, b: Float) -> Float {
+    ? (a >. b)
+    | True` => a;
+    | False` => b;
+};
+
+abs = (a: Float) -> Float {
+    ? (a >. 0.0)
+    | True` => a;
+    | False` => (0.0 -. a);
 };
 
 vec2 = (x: Float, y: Float) -> Vec2 {
@@ -56,23 +74,35 @@ bounce = (position: Vec2, speed: Vec2) -> Vec2 {
     border_x_l = (-300.0 +. width);
     border_y_u = (300.0 -. width);
     border_y_d = (-300.0 +. width);
-    new_x_speed = ? ((x_pos <. border_x_l) || (x_pos >. border_x_r))
-        | True` => (initial_x_speed *. -1.0);
-        | False` => initial_x_speed;
+    new_x_speed = ? (x_pos <. border_x_l)
+        | True` => abs(initial_x_speed);
+        | False` => ? (x_pos >. border_x_r)
+            | True` => (0.0 -. abs(initial_x_speed));
+            | False` => initial_x_speed;
+            ;
         ;
-    new_y_speed = ? ((y_pos <. border_y_d) || (y_pos >. border_y_u))
-        | True` => (initial_y_speed *. -1.0);
-        | False` => initial_y_speed ;
+    new_y_speed = ? (y_pos <. border_y_d)
+        | True` => abs(initial_y_speed);
+        | False` => ? (y_pos >. border_y_u)
+            | True` => (0.0 -. abs(initial_y_speed));
+            | False` => initial_y_speed;
+            ;
         ;
     < x = new_x_speed; y = new_y_speed;>
+};
+
+apply_gravity = (speed: Vec2, delta: Float) -> Vec2 {
+    gravity = vec2(0.0,-200.0);
+    add_vec2s(speed, mul_vec2_scalar(gravity, delta))
 };
 
 update_handler = (self: Self, delta: Float) -> SelfAndCommands {
     moved_pos = move(@self.position, @self.speed, delta);
     bounced_speed = bounce(moved_pos, @self.speed);
+    gravitied_speed = apply_gravity(bounced_speed, delta);
     commands = (draw_bouncer(@self.position) ~~ draw_borders(0));
     <
-    self = < self | position = moved_pos; speed = bounced_speed; >;
+    self = < self | position = moved_pos; speed = gravitied_speed; >;
     commands = commands;
     >
 };
