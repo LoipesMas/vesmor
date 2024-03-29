@@ -64,7 +64,7 @@ move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
     add_vec2s(position, mul_vec2_scalar(speed, delta))
 };
 
-bounce = (position: Vec2, speed: Vec2) -> Vec2 {
+bounce = (position: Vec2, speed: Vec2) -> Self {
     x_pos = @position.x;
     y_pos = @position.y;
     initial_x_speed = @speed.x;
@@ -88,29 +88,41 @@ bounce = (position: Vec2, speed: Vec2) -> Vec2 {
             | False` => initial_y_speed;
             ;
         ;
-    < x = new_x_speed; y = new_y_speed;>
+    new_y_position = ? (y_pos <. border_y_d)
+        | True` => border_y_d;
+        | False` => y_pos;
+        ;
+    <
+    position = < position | y = new_y_position; >;
+    speed = vec2(new_x_speed, new_y_speed);
+    >
 };
 
 apply_gravity = (speed: Vec2, delta: Float) -> Vec2 {
-    gravity = vec2(0.0,-200.0);
+    gravity = vec2(0.0,-500.0);
     add_vec2s(speed, mul_vec2_scalar(gravity, delta))
 };
 
 update_handler = (self: Self, delta: Float) -> SelfAndCommands {
     moved_pos = move(@self.position, @self.speed, delta);
-    bounced_speed = bounce(moved_pos, @self.speed);
-    gravitied_speed = apply_gravity(bounced_speed, delta);
-    commands = (draw_bouncer(@self.position) ~~ draw_borders(0));
+    bounced = bounce(moved_pos, @self.speed);
+    gravitied_speed = apply_gravity(@bounced.speed, delta);
+    commands = (draw_bouncer(@bounced.position) ~~ draw_borders(0));
     <
-    self = < self | position = moved_pos; speed = gravitied_speed; >;
+    self = < position = @bounced.position; speed = gravitied_speed; >;
     commands = commands;
     >
+};
+
+jump = (self: Self) -> Self {
+    < self | speed = <@self.speed | y = max(@@self.speed.y, 400.0);>;>
 };
 
 event_handler = (self: Self, event: Event) -> SelfAndCommands {
     new_self = ? event
         | KeyPressed` key => ? key
             | G` => < self | position = vec2(0.0,0.0);>;
+            | W` => jump(self);
             | _ => self;
             ;
         | _ => self;
