@@ -132,16 +132,8 @@ fn init_runtime() -> Runtime {
 }
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     let key_str = format!("{key:?}");
-    let key_enum = vvcl::ast::Expr::EnumVariant(vvcl::ast::EnumVariant {
-        enu: ident("Key"),
-        variant: ident(&key_str),
-        body: None,
-    });
-    let event_enum = vvcl::ast::Expr::EnumVariant(vvcl::ast::EnumVariant {
-        enu: ident("Event"),
-        variant: ident("KeyPressed"),
-        body: Some(Box::new(key_enum)),
-    });
+    let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
+    let event_enum = vvcl::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
 
     let mut local_scope = vvcl::eval::ScopeMap::new();
     local_scope.insert(vvcl::utils::ident("event"), event_enum);
