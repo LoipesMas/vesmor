@@ -5,6 +5,8 @@ mod builtin_functions;
 mod eval;
 mod parse;
 mod utils;
+use nom_locate::LocatedSpan;
+use nom_recursive::RecursiveInfo;
 use utils::ident;
 
 use crate::utils::default_global_scope;
@@ -24,7 +26,8 @@ fn main() {
     // FIXME: this also removes spaces inside strings...
     // and leaving it in will probably make it easier to show parser errors
     let contents = contents.replace(['\n', ' '], "");
-    let (input, funs) = parse::all_funs(&contents).unwrap();
+    let (input, funs) =
+        parse::all_funs(LocatedSpan::new_extra(&contents, RecursiveInfo::new())).unwrap();
 
     if !input.is_empty() {
         eprintln!("parsing failed! input left:\n{input}");

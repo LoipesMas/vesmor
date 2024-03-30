@@ -15,7 +15,7 @@ pub fn double() -> Expr {
                 panic!("argument a is not `Expr::Int`!")
             }
         } else {
-            double()
+            Expr::BuiltInFunction(BuiltInFunction { body: &body })
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -39,7 +39,7 @@ pub fn int_to_str() -> Expr {
                 panic!("Expected `Int`, got {:?}", a)
             }
         } else {
-            int_to_str()
+            Expr::BuiltInFunction(BuiltInFunction { body: &body })
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -56,27 +56,22 @@ pub fn int_to_str() -> Expr {
 
 pub fn list_map() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
-        let list = local_scope
-            .get(&ident("list"))
-            .expect("Expected to be called with argument `list`");
-        let function = local_scope
-            .get(&ident("function"))
-            .expect("Expected to be called with argument `function`");
-        if let (Expr::List(list), Expr::Function(fun)) = (list, function) {
-            Expr::List(
+        let list = local_scope.get(&ident("list"));
+        let function = local_scope.get(&ident("function"));
+        match (list, function) {
+            (Some(Expr::List(list)), Some(function)) => Expr::List(
                 list.iter()
                     .map(|v| FunctionCall {
-                        name: fun.name.clone(),
+                        function: Box::new(function.clone()),
                         arguments: vec![v.clone()],
                     })
                     .map(Expr::FunctionCall)
                     .collect(),
-            )
-        } else {
-            panic!(
-                "Expected List and Function, got {:?} and {:?}",
-                list, function
-            )
+            ),
+            (Some(a), Some(b)) if a.is_realized() && b.is_realized() => {
+                panic!("Expected List and Function, got {:?} and {:?}", a, b)
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -99,16 +94,17 @@ pub fn list_map() -> Expr {
 
 pub fn list_get() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
-        let list = local_scope
-            .get(&ident("list"))
-            .expect("Expected to be called with argument `list`");
-        let idx = local_scope
-            .get(&ident("idx"))
-            .expect("Expected to be called with argument `idx`");
-        if let (Expr::List(list), Expr::Int(idx)) = (list, idx) {
-            expr_option_to_enum(list.get(*idx as usize).cloned())
-        } else {
-            panic!("Expected List and Int, got {:?} and {:?}", list, idx)
+        dbg!(local_scope);
+        let list = local_scope.get(&ident("list"));
+        let idx = local_scope.get(&ident("idx"));
+        match (list, idx) {
+            (Some(Expr::List(list)), Some(Expr::Int(idx))) => {
+                expr_option_to_enum(list.get(*idx as usize).cloned())
+            }
+            (Some(a), Some(b)) if a.is_realized() && b.is_realized() => {
+                panic!("Expected List and Int, got {:?} and {:?}", a, b)
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
         }
     }
     let bif = BuiltInFunction { body: &body };

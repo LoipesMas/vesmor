@@ -1,20 +1,8 @@
-append_zero = (str: String) -> String {
-    (str ~ "0")
-};
-
 main = (a: Bool, b: Int) -> Int {
-    list_get([1,2,3], 2)
+    x =rec(b);
+    @@x.r.a
 };
 
 rec = (a: Int) -> Record {
-    < x = 5; foo = (a*7); >
-};
-
-add_two = (a: Int) -> Int {
-    added = { (0 + 2 )};
-    (a + added)
-};
-
-addfour = (value: Int) -> Int {
-    (add_two(value) + 2)
+    < x = 5; foo = (a*7); r = <a=5;>;>
 };

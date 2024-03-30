@@ -1,6 +1,6 @@
 use crate::ast::{
     BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern, EnumVariant,
-    Expr, Function, Ident, MatchBranch, Record, RecordAccess, RecordAccessError,
+    Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess, RecordAccessError,
 };
 use crate::utils::{bool_to_enum, enum_to_bool, map_from_defs};
 use std::collections::HashMap;
@@ -83,35 +83,50 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             body: Box::new(brl(body)),
         }),
         Expr::FunctionCall(fc) => {
-            if let Some(fun_expr) = combined_scope.get(&fc.name) {
-                if let Expr::Function(fun) = fun_expr {
-                    let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
-                    if reduced_args.is_empty() {
-                        println!("not reducing FunctionCall, because no arguments passed!");
-                        e.clone()
-                    } else if !reduced_args.iter().all(Expr::is_realized) {
-                        // println!("not reducing FunctionCall, because not all arguments are known!");
-                        e.clone()
-                    } else {
-                        let mut inner_scope = HashMap::new();
-                        for (i, arg_expr) in reduced_args.iter().enumerate() {
-                            if let Some(target_arg) = fun.arguments.get(i) {
-                                inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
-                            } else {
-                                panic!(
-                                    "Tried to call {} with more arguments that expected!",
-                                    fc.name.0
-                                )
-                            }
-                        }
-                        br(&HashMap::new(), &br(&inner_scope, &fun.body))
-                    }
+            dbg!(&fc);
+            let function = if let Expr::Function(_) = *fc.function {
+                *fc.function.clone()
+            } else if fc.function.is_realized() {
+                panic!("Tried to call non-function: {:?}", fc.function)
+            } else if let Expr::Value(ref v) = *fc.function {
+                if let Some(f) = combined_scope.get(v) {
+                    f.clone()
                 } else {
-                    panic!("Tried to call non-function: {}", fc.name.0);
+                    *fc.function.clone()
                 }
             } else {
-                // println!("missing function: {}", &fc.name.0);
-                Expr::FunctionCall(fc.clone())
+                dbg!(&fc.function);
+                brl(&fc.function)
+            };
+            dbg!(&function);
+            if let Expr::Function(fun) = function {
+                let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
+                dbg!(&reduced_args);
+                if reduced_args.is_empty() {
+                    println!("not reducing FunctionCall, because no arguments passed!");
+                    e.clone()
+                } else if !reduced_args.iter().all(Expr::is_realized) {
+                    // println!("not reducing FunctionCall, because not all arguments are known!");
+                    e.clone()
+                } else {
+                    let mut inner_scope = HashMap::new();
+                    for (i, arg_expr) in reduced_args.iter().enumerate() {
+                        if let Some(target_arg) = fun.arguments.get(i) {
+                            inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
+                        } else {
+                            panic!("Tried to call function with more arguments that expected!",)
+                        }
+                    }
+                    dbg!(&inner_scope);
+                    br(&HashMap::new(), &br(&inner_scope, &fun.body))
+                }
+            } else if function.is_realized() {
+                panic!("Tried to call non-function: {:?}", function);
+            } else {
+                Expr::FunctionCall(FunctionCall {
+                    function: Box::new(function),
+                    arguments: fc.arguments.clone(),
+                })
             }
         }
         Expr::BuiltInFunction(bif) => (bif.body)(local_scope),

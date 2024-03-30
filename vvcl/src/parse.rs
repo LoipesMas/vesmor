@@ -9,6 +9,8 @@ use nom::{
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     IResult,
 };
+use nom_locate::LocatedSpan;
+use nom_recursive::{recursive_parser, RecursiveInfo};
 
 use crate::ast::{
     ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
@@ -16,7 +18,9 @@ use crate::ast::{
 };
 use crate::utils::map_from_defs;
 
-type PResult<'a, O> = IResult<&'a str, O>;
+type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
+
+type PResult<'a, O> = IResult<Span<'a>, O>;
 
 fn is_any_of(s: &'static str) -> impl Fn(char) -> bool {
     |e| s.contains([e])
@@ -26,17 +30,17 @@ fn is_valid_ident_char(c: char) -> bool {
     (char::is_ascii(&c) && is_alphabetic(c as u8)) || is_any_of("_")(c)
 }
 
-fn ident(input: &str) -> PResult<Ident> {
+fn ident(input: Span) -> PResult<Ident> {
     map(
         recognize(pair(
             alt((nom::character::complete::alpha1, tag("_"))),
             many0_count(alt((alphanumeric1, tag("_")))),
         )),
-        |s: &str| Ident(s.to_owned()),
+        |s: Span| Ident(s.to_string()),
     )(input)
 }
 
-fn arg_def(input: &str) -> PResult<ArgDef> {
+fn arg_def(input: Span) -> PResult<ArgDef> {
     let (input, (name, typ)) = separated_pair(ident, tag(":"), take_till(is_any_of(",")))(input)?;
     Ok((
         input,
@@ -47,13 +51,13 @@ fn arg_def(input: &str) -> PResult<ArgDef> {
     ))
 }
 
-fn definition(input: &str) -> PResult<Definition> {
+fn definition(input: Span) -> PResult<Definition> {
     let (input, (name, body)) = separated_pair(ident, tag("="), expr)(input)?;
     let (input, _) = tag(";")(input)?;
     Ok((input, Definition { name, body }))
 }
 
-fn block(input: &str) -> PResult<Block> {
+fn block(input: Span) -> PResult<Block> {
     let (input, (definitions, expr)) =
         delimited(tag("{"), pair(many0(definition), expr), tag("}"))(input)?;
     Ok((
@@ -65,20 +69,20 @@ fn block(input: &str) -> PResult<Block> {
     ))
 }
 
-fn block_expr(input: &str) -> PResult<Expr> {
+fn block_expr(input: Span) -> PResult<Expr> {
     map(block, Expr::Block)(input)
 }
 
-fn int_expr(input: &str) -> PResult<Expr> {
+fn int_expr(input: Span) -> PResult<Expr> {
     map(
-        map_res(take_while(is_any_of("0123456789")), |s: &str| {
-            s.parse::<i64>()
+        map_res(take_while(is_any_of("0123456789")), |s: Span| {
+            s.to_string().parse::<i64>()
         }),
         Expr::Int,
     )(input)
 }
 
-fn float_expr(input: &str) -> PResult<Expr> {
+fn float_expr(input: Span) -> PResult<Expr> {
     map(
         map_res(
             recognize(pair(
@@ -89,13 +93,13 @@ fn float_expr(input: &str) -> PResult<Expr> {
                     take_while(is_any_of("0123456789")),
                 ),
             )),
-            |s: &str| s.parse::<f64>(),
+            |s: Span| s.to_string().parse::<f64>(),
         ),
         Expr::Float,
     )(input)
 }
 
-fn value_expr(input: &str) -> PResult<Expr> {
+fn value_expr(input: Span) -> PResult<Expr> {
     map(ident, Expr::Value)(input)
 }
 
@@ -105,16 +109,16 @@ macro_rules! alt_tags {
     };
 }
 
-fn binary_operator(input: &str) -> PResult<BinaryOperator> {
+fn binary_operator(input: Span) -> PResult<BinaryOperator> {
     map_res(
         // HACK: order of those tags is important:
         // "+." has to be before "+", otherwise it would never be matched
         alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~", "<.", ">.", "||", "&&"),
-        BinaryOperator::from_str,
+        |c: Span| BinaryOperator::from_str(&c),
     )(input)
 }
 
-fn binary_operation(input: &str) -> PResult<Expr> {
+fn binary_operation(input: Span) -> PResult<Expr> {
     let (input, (left, operator, right)) =
         delimited(tag("("), tuple((expr, binary_operator, expr)), tag(")"))(input)?;
     let bo = BinaryOperation {
@@ -125,32 +129,36 @@ fn binary_operation(input: &str) -> PResult<Expr> {
     Ok((input, Expr::BinaryOperation(bo)))
 }
 
-fn string_literal(input: &str) -> PResult<String> {
+fn string_literal(input: Span) -> PResult<String> {
     map(
         delimited(tag("\""), take_until("\""), tag("\"")),
-        str::to_owned,
+        |c: Span| c.to_string(),
     )(input)
 }
 
-fn string_literal_expr(input: &str) -> PResult<Expr> {
+fn string_literal_expr(input: Span) -> PResult<Expr> {
     map(string_literal, Expr::String)(input)
 }
 
-fn function_call(input: &str) -> PResult<FunctionCall> {
+#[recursive_parser]
+fn function_call(input: Span) -> PResult<FunctionCall> {
     map(
         pair(
-            ident,
+            map(expr, Box::new),
             delimited(tag("("), separated_list0(tag(","), expr), tag(")")),
         ),
-        |(name, arguments)| FunctionCall { name, arguments },
+        |(function, arguments)| FunctionCall {
+            function,
+            arguments,
+        },
     )(input)
 }
 
-fn function_call_expr(input: &str) -> PResult<Expr> {
+fn function_call_expr(input: Span) -> PResult<Expr> {
     map(function_call, Expr::FunctionCall)(input)
 }
 
-fn record(input: &str) -> PResult<Record> {
+fn record(input: Span) -> PResult<Record> {
     let (input, (from, definitions)) = delimited(
         tag("<"),
         pair(opt(terminated(expr, tag("|"))), many0(definition)),
@@ -165,11 +173,11 @@ fn record(input: &str) -> PResult<Record> {
     ))
 }
 
-fn record_expr(input: &str) -> PResult<Expr> {
+fn record_expr(input: Span) -> PResult<Expr> {
     map(record, Expr::Record)(input)
 }
 
-fn record_access(input: &str) -> PResult<RecordAccess> {
+fn record_access(input: Span) -> PResult<RecordAccess> {
     map(
         preceded(tag("@"), separated_pair(expr, tag("."), ident)),
         |(record, member)| RecordAccess {
@@ -179,11 +187,11 @@ fn record_access(input: &str) -> PResult<RecordAccess> {
     )(input)
 }
 
-fn record_access_expr(input: &str) -> PResult<Expr> {
+fn record_access_expr(input: Span) -> PResult<Expr> {
     map(record_access, Expr::RecordAccess)(input)
 }
 
-fn list_expr(input: &str) -> PResult<Expr> {
+fn list_expr(input: Span) -> PResult<Expr> {
     map(
         delimited(
             tag("["),
@@ -194,7 +202,7 @@ fn list_expr(input: &str) -> PResult<Expr> {
     )(input)
 }
 
-fn enum_variant_constructor(input: &str) -> PResult<Expr> {
+fn enum_variant_constructor(input: Span) -> PResult<Expr> {
     map(
         separated_pair(separated_pair(ident, tag("::"), ident), tag("`"), opt(expr)),
         |((enu, variant), body)| {
@@ -207,7 +215,7 @@ fn enum_variant_constructor(input: &str) -> PResult<Expr> {
     )(input)
 }
 
-fn enum_pattern(input: &str) -> PResult<EnumPattern> {
+fn enum_pattern(input: Span) -> PResult<EnumPattern> {
     alt((
         map(
             separated_pair(ident, tag("`"), opt(ident)),
@@ -217,7 +225,7 @@ fn enum_pattern(input: &str) -> PResult<EnumPattern> {
     ))(input)
 }
 
-fn enum_matching_branch(input: &str) -> PResult<MatchBranch> {
+fn enum_matching_branch(input: Span) -> PResult<MatchBranch> {
     map(
         delimited(
             tag("|"),
@@ -231,7 +239,7 @@ fn enum_matching_branch(input: &str) -> PResult<MatchBranch> {
     )(input)
 }
 
-fn enum_matching_expr(input: &str) -> PResult<Expr> {
+fn enum_matching_expr(input: Span) -> PResult<Expr> {
     map(
         preceded(tag("?"), pair(expr, many1(enum_matching_branch))),
         |(value, branches)| {
@@ -243,7 +251,7 @@ fn enum_matching_expr(input: &str) -> PResult<Expr> {
     )(input)
 }
 
-fn expr(input: &str) -> PResult<Expr> {
+pub fn expr(input: Span) -> PResult<Expr> {
     alt((
         enum_variant_constructor,
         enum_matching_expr,
@@ -260,7 +268,7 @@ fn expr(input: &str) -> PResult<Expr> {
     ))(input)
 }
 
-pub fn fun(input: &str) -> PResult<Function> {
+pub fn fun(input: Span) -> PResult<Function> {
     // TODO: this should be a standard `Definition` instead
     let (input, name) = ident(input)?;
     let (input, _) = tag("=")(input)?;
@@ -281,6 +289,6 @@ pub fn fun(input: &str) -> PResult<Function> {
     ))
 }
 
-pub fn all_funs(input: &str) -> PResult<Vec<Function>> {
+pub fn all_funs(input: Span) -> PResult<Vec<Function>> {
     many0(fun)(input)
 }

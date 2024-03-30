@@ -98,7 +98,7 @@ impl std::fmt::Debug for BuiltInFunction {
 
 #[derive(Debug, Clone)]
 pub struct FunctionCall {
-    pub name: Ident,
+    pub function: Box<Expr>,
     pub arguments: Vec<Expr>,
 }
 
