@@ -4,16 +4,27 @@
     <meta charset="UTF-8">
     <title>VVC</title>
     <style>
+body {
+    background-color: #222222;
+}
+
 #sourceText {
-    width: 720px;
-    height: 720px;
+	width: 720px;
+	height: 720px;
+	background-color: #222222;
+	border: 0;
+	font-size: larger;
+	color: #dfe1a5;
 }
     </style>
   </head>
   <body>
     <script src="index.js"></script>
-    <textarea type="text" name="" value="" id="sourceText"></textarea>
+    <textarea type="text" name="" value="" id="sourceText" 
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        ></textarea>
     <button type="" onclick="full_reload()">full reload</button>
     <button type="" onclick="hot_reload()">hot reload</button>
+    <button type="" onclick="reset_code()">reset code</button>
   </body>
 </html>
