@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use nom_locate::LocatedSpan;
+use nom_recursive::RecursiveInfo;
+
 use crate::{
     ast::{Definition, EnumVariant, Expr, Ident},
     builtin_functions::scope_with_builtin_functions,
@@ -73,4 +76,8 @@ pub fn enum_variant(enu: &str, variant: &str, body: Option<Expr>) -> Expr {
 pub fn expr_option_to_enum(body: Option<Expr>) -> Expr {
     let variant_str = if body.is_some() { "Some" } else { "None" };
     enum_variant("Option", variant_str, body)
+}
+
+pub fn wrap_in_span(input: &str) -> LocatedSpan<&str, RecursiveInfo> {
+    LocatedSpan::new_extra(input, RecursiveInfo::new())
 }

@@ -5,11 +5,9 @@ mod builtin_functions;
 mod eval;
 mod parse;
 mod utils;
-use nom_locate::LocatedSpan;
-use nom_recursive::RecursiveInfo;
 use utils::ident;
 
-use crate::utils::default_global_scope;
+use crate::utils::{default_global_scope, wrap_in_span};
 
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
@@ -26,8 +24,9 @@ fn main() {
     // FIXME: this also removes spaces inside strings...
     // and leaving it in will probably make it easier to show parser errors
     let contents = contents.replace(['\n', ' '], "");
-    let (input, funs) =
-        parse::all_funs(LocatedSpan::new_extra(&contents, RecursiveInfo::new())).unwrap();
+
+    let input = wrap_in_span(&contents);
+    let (input, funs) = parse::all_funs(input).unwrap();
 
     if !input.is_empty() {
         eprintln!("parsing failed! input left:\n{input}");

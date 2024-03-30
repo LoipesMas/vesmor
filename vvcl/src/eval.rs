@@ -83,7 +83,6 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             body: Box::new(brl(body)),
         }),
         Expr::FunctionCall(fc) => {
-            dbg!(&fc);
             let function = if let Expr::Function(_) = *fc.function {
                 *fc.function.clone()
             } else if fc.function.is_realized() {
@@ -95,13 +94,10 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                     *fc.function.clone()
                 }
             } else {
-                dbg!(&fc.function);
                 brl(&fc.function)
             };
-            dbg!(&function);
             if let Expr::Function(fun) = function {
                 let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
-                dbg!(&reduced_args);
                 if reduced_args.is_empty() {
                     println!("not reducing FunctionCall, because no arguments passed!");
                     e.clone()
@@ -117,7 +113,6 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                             panic!("Tried to call function with more arguments that expected!",)
                         }
                     }
-                    dbg!(&inner_scope);
                     br(&HashMap::new(), &br(&inner_scope, &fun.body))
                 }
             } else if function.is_realized() {

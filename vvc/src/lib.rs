@@ -19,7 +19,9 @@ pub async fn main_web() {
 
 #[wasm_bindgen]
 pub async fn update_source_code(code: &str, hot_reload: bool) -> String {
-    match vvcl::parse::all_funs(&code.replace(['\n', ' '], "")) {
+    let code = code.replace(['\n', ' '], "");
+    let code = vvcl::utils::wrap_in_span(&code);
+    match vvcl::parse::all_funs(code) {
         Ok((input, _funs)) => {
             if input.is_empty() {
                 let ret = "Parsing successful!".to_owned();

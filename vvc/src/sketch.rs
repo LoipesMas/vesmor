@@ -102,7 +102,8 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
     // FIXME: this also removes spaces inside strings...
     // and leaving it in will probably make it easier to show parser errors
     let contents = contents.replace(['\n', ' '], "");
-    let (input, funs) = vvcl::parse::all_funs(&contents).unwrap();
+    let contents = vvcl::utils::wrap_in_span(&contents);
+    let (input, funs) = vvcl::parse::all_funs(contents).unwrap();
 
     if !input.is_empty() {
         panic!("parsing failed! input left:\n{input}");
