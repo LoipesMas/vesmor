@@ -10,7 +10,6 @@ mod sketch;
 pub async fn main_web() {
     #[cfg(debug_assertions)]
     console_error_panic_hook::set_once();
-    // TODO: we can use the arg as code source
 
     block_on(async {
         run_app().await;
@@ -21,8 +20,8 @@ pub async fn main_web() {
 pub async fn update_source_code(code: &str, hot_reload: bool) -> String {
     let code = code.replace(['\n', ' '], "");
     let code = vvcl::utils::wrap_in_span(&code);
-    match vvcl::parse::all_funs(code) {
-        Ok((input, _funs)) => {
+    match vvcl::parse::top_definitions(code) {
+        Ok((input, _defs)) => {
             if input.is_empty() {
                 let ret = "Parsing successful!".to_owned();
                 SOURCE_CODE.with_borrow_mut(|sc| {

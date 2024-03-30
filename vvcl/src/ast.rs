@@ -76,7 +76,6 @@ pub struct ArgDef {
 
 #[derive(Debug, Clone)]
 pub struct Function {
-    pub name: Ident,
     pub arguments: Vec<ArgDef>,
     pub return_type: String,
     pub body: Box<Expr>,

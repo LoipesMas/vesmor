@@ -72,12 +72,10 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             apply_binary_operation(bo)
         }
         Expr::Function(Function {
-            name,
             arguments,
             return_type,
             body,
         }) => Expr::Function(Function {
-            name: name.clone(),
             arguments: arguments.clone(),
             return_type: return_type.clone(),
             body: Box::new(brl(body)),

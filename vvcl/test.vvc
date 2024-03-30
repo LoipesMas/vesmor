@@ -1,6 +1,6 @@
 main = (a: Bool, b: Int) -> Int {
     x =rec(b);
-    @@x.r.a
+    @x.foo
 };
 
 rec = (a: Int) -> Record {

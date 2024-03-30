@@ -1,10 +1,3 @@
-init = () -> Self {
-    <
-    position = < x = 0.0; y = 0.0; >;
-    speed = < x = 167.0; y = -200.0; >;
-    >
-};
-
 min = (a: Float, b: Float) -> Float {
     ? (a <. b)
     | True` => a;
@@ -52,13 +45,22 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
     ]
 };
 
+init = <
+        position = < x = 0.0; y = 0.0; >;
+        speed = < x = 167.0; y = -200.0; >;
+     >
+;
+
+box_size = 300.0;
+bouncer_size = 20.0;
+jump_force = 500.0;
+gravity = vec2(0.0,-700.0);
+
 draw_bouncer = (position: Vec2) -> List<Command> {
-    draw_box(position, 7.0)
+    draw_box(position, bouncer_size)
 };
 
-draw_borders = (_: Int) -> List<Command> {
-    draw_box(< x = 0.0; y = 0.0;>, 300.0)
-};
+draw_borders = draw_box(< x = 0.0; y = 0.0;>, box_size);
 
 move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
     add_vec2s(position, mul_vec2_scalar(speed, delta))
@@ -69,11 +71,11 @@ bounce = (position: Vec2, speed: Vec2) -> Self {
     y_pos = @position.y;
     initial_x_speed = @speed.x;
     initial_y_speed = @speed.y;
-    width = 7.0;
-    border_x_r = (300.0 -. width);
-    border_x_l = (-300.0 +. width);
-    border_y_u = (300.0 -. width);
-    border_y_d = (-300.0 +. width);
+    border_pos = (box_size -. bouncer_size);
+    border_x_r = border_pos;
+    border_x_l = (0.0 -. border_pos);
+    border_y_u = border_pos;
+    border_y_d = (0.0 -. border_pos);
     new_x_speed = ? (x_pos <. border_x_l)
         | True` => abs(initial_x_speed);
         | False` => ? (x_pos >. border_x_r)
@@ -99,7 +101,6 @@ bounce = (position: Vec2, speed: Vec2) -> Self {
 };
 
 apply_gravity = (speed: Vec2, delta: Float) -> Vec2 {
-    gravity = vec2(0.0,-500.0);
     add_vec2s(speed, mul_vec2_scalar(gravity, delta))
 };
 
@@ -107,7 +108,7 @@ update_handler = (self: Self, delta: Float) -> SelfAndCommands {
     moved_pos = move(@self.position, @self.speed, delta);
     bounced = bounce(moved_pos, @self.speed);
     gravitied_speed = apply_gravity(@bounced.speed, delta);
-    commands = (draw_bouncer(@bounced.position) ~~ draw_borders(0));
+    commands = (draw_bouncer(@bounced.position) ~~ draw_borders);
     <
     self = < position = @bounced.position; speed = gravitied_speed; >;
     commands = commands;
@@ -115,7 +116,7 @@ update_handler = (self: Self, delta: Float) -> SelfAndCommands {
 };
 
 jump = (self: Self) -> Self {
-    < self | speed = <@self.speed | y = max(@@self.speed.y, 400.0);>;>
+    < self | speed = <@self.speed | y = max(@@self.speed.y, jump_force);>;>
 };
 
 event_handler = (self: Self, event: Event) -> SelfAndCommands {
@@ -129,3 +130,4 @@ event_handler = (self: Self, event: Event) -> SelfAndCommands {
         ;
     <self = new_self; commands = [];>
 };
+

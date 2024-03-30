@@ -3,7 +3,7 @@
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
-    utils::{enum_variant, expr_option_to_enum, ident},
+    utils::{expr_option_to_enum, ident},
 };
 
 pub fn double() -> Expr {
@@ -20,7 +20,6 @@ pub fn double() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: ident("double"),
         arguments: vec![ArgDef {
             name: ident("a"),
             typ: "Int".to_owned(),
@@ -44,7 +43,6 @@ pub fn int_to_str() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: ident("int_to_str"),
         arguments: vec![ArgDef {
             name: ident("a"),
             typ: "Int".to_owned(),
@@ -76,7 +74,6 @@ pub fn list_map() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: ident("list_map"),
         arguments: vec![
             ArgDef {
                 name: ident("list"),
@@ -109,7 +106,6 @@ pub fn list_get() -> Expr {
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
-        name: ident("list_get"),
         arguments: vec![
             ArgDef {
                 name: ident("list"),

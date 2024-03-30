@@ -7,7 +7,8 @@ mod parse;
 mod utils;
 use utils::ident;
 
-use crate::utils::{default_global_scope, wrap_in_span};
+use ast::Definition;
+use utils::{default_global_scope, wrap_in_span};
 
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
@@ -26,46 +27,40 @@ fn main() {
     let contents = contents.replace(['\n', ' '], "");
 
     let input = wrap_in_span(&contents);
-    let (input, funs) = parse::all_funs(input).unwrap();
+    let (input, defs) = parse::top_definitions(input).unwrap();
 
     if !input.is_empty() {
         eprintln!("parsing failed! input left:\n{input}");
         return;
     }
 
-    let mut global_scope = default_global_scope();
-
-    // insert builtin_functions
-
     // 1st pass of "compilation"
     // without global scope
-    for f in &funs {
-        let reduced_f = eval::beta_reduction(
-            &HashMap::new(),
-            &HashMap::new(),
-            &ast::Expr::Function(f.clone()),
-        );
-        let res = global_scope.insert(f.name.clone(), reduced_f);
-        if res.is_some() {
-            panic!("redefined function {}", f.name.0);
-        }
-    }
+    let reduced_defs: Vec<Definition> = defs
+        .iter()
+        .map(|d| Definition {
+            body: eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),
+            name: d.name.clone(),
+        })
+        .collect();
+    let mut global_scope = default_global_scope();
+    global_scope.extend(utils::map_from_defs(reduced_defs));
 
     // debug
     let main_body = global_scope.get(&ident("main")).unwrap();
     dbg!(main_body);
 
-    // 2nd pass of "compilation"
-    // with global scope
-    for f in funs {
-        let reduced_f = eval::beta_reduction(
-            &global_scope,
-            &HashMap::new(),
-            &ast::Expr::Function(f.clone()),
-        );
-        global_scope.insert(f.name.clone(), reduced_f);
-    }
-
+    // // 2nd pass of "compilation"
+    // // with global scope
+    // for f in funs {
+    //     let reduced_f = eval::beta_reduction(
+    //         &global_scope,
+    //         &HashMap::new(),
+    //         &ast::Expr::Function(f.clone()),
+    //     );
+    //     global_scope.insert(f.name.clone(), reduced_f);
+    // }
+    //
     // debug
     let main_body = global_scope.get(&ident("main")).unwrap();
     dbg!(main_body);

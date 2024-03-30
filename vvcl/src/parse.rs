@@ -41,7 +41,7 @@ fn ident(input: Span) -> PResult<Ident> {
 }
 
 fn arg_def(input: Span) -> PResult<ArgDef> {
-    let (input, (name, typ)) = separated_pair(ident, tag(":"), take_till(is_any_of(",")))(input)?;
+    let (input, (name, typ)) = separated_pair(ident, tag(":"), type_name)(input)?;
     Ok((
         input,
         ArgDef {
@@ -251,8 +251,38 @@ fn enum_matching_expr(input: Span) -> PResult<Expr> {
     )(input)
 }
 
+fn type_name(input: Span) -> PResult<String> {
+    map(
+        recognize(pair(ident, opt(delimited(tag("<"), type_name, tag(">"))))),
+        |s: Span| s.to_string(),
+    )(input)
+}
+
+fn fun(input: Span) -> PResult<Function> {
+    map(
+        pair(
+            separated_pair(
+                delimited(tag("("), separated_list0(tag(","), arg_def), tag(")")),
+                tag("->"),
+                type_name,
+            ),
+            map(expr, Box::new),
+        ),
+        |((arguments, return_type), body)| Function {
+            arguments,
+            body,
+            return_type,
+        },
+    )(input)
+}
+
+fn fun_expr(input: Span) -> PResult<Expr> {
+    map(fun, Expr::Function)(input)
+}
+
 pub fn expr(input: Span) -> PResult<Expr> {
     alt((
+        fun_expr,
         enum_variant_constructor,
         enum_matching_expr,
         list_expr,
@@ -268,27 +298,6 @@ pub fn expr(input: Span) -> PResult<Expr> {
     ))(input)
 }
 
-pub fn fun(input: Span) -> PResult<Function> {
-    // TODO: this should be a standard `Definition` instead
-    let (input, name) = ident(input)?;
-    let (input, _) = tag("=")(input)?;
-    let (input, args) = delimited(tag("("), take_until(")"), tag(")"))(input)?;
-    let (_, args) = separated_list0(tag(","), arg_def)(args)?;
-    let (input, _) = tag("->")(input)?;
-    let (input, return_type) = take_until("{")(input)?;
-    let (input, body) = expr(input)?;
-    let (input, _) = tag(";")(input)?;
-    Ok((
-        input,
-        Function {
-            name,
-            body: Box::new(body),
-            return_type: return_type.trim().to_owned(),
-            arguments: args,
-        },
-    ))
-}
-
-pub fn all_funs(input: Span) -> PResult<Vec<Function>> {
-    many0(fun)(input)
+pub fn top_definitions(input: Span) -> PResult<Vec<Definition>> {
+    many0(definition)(input)
 }

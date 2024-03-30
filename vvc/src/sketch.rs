@@ -1,4 +1,4 @@
-use std::{cell::RefCell, str::FromStr};
+use std::{cell::RefCell, collections::HashMap, str::FromStr};
 
 use nannou::{
     prelude::*,
@@ -92,18 +92,13 @@ struct Runtime {
 }
 
 fn init_runtime(source_code: &SourceCode) -> Runtime {
-    let mut global_scope = vvcl::utils::default_global_scope();
-
-    // let file_path = "./game.vvc";
-    // let contents =
-    //     std::fs::read_to_string(file_path).expect("Should have been able to read the file");
     let contents = &source_code.code;
 
     // FIXME: this also removes spaces inside strings...
     // and leaving it in will probably make it easier to show parser errors
     let contents = contents.replace(['\n', ' '], "");
     let contents = vvcl::utils::wrap_in_span(&contents);
-    let (input, funs) = vvcl::parse::all_funs(contents).unwrap();
+    let (input, defs) = vvcl::parse::top_definitions(contents).unwrap();
 
     if !input.is_empty() {
         panic!("parsing failed! input left:\n{input}");
@@ -111,37 +106,20 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
 
     // 1st pass of "compilation"
     // without global scope
-    for f in &funs {
-        let reduced_f = vvcl::eval::beta_reduction(
-            &vvcl::eval::ScopeMap::new(),
-            &vvcl::eval::ScopeMap::new(),
-            &vvcl::ast::Expr::Function(f.clone()),
-        );
-        let res = global_scope.insert(f.name.clone(), reduced_f);
-        if res.is_some() {
-            panic!("redefined function {}", f.name.0);
-        };
-    }
-    // 2nd pass of "compilation"
-    // with global scope
-    for f in funs {
-        let reduced_f = vvcl::eval::beta_reduction(
-            &global_scope,
-            &vvcl::eval::ScopeMap::new(),
-            &vvcl::ast::Expr::Function(f.clone()),
-        );
-        global_scope.insert(f.name.clone(), reduced_f);
-    }
+    let reduced_defs: Vec<vvcl::ast::Definition> = defs
+        .iter()
+        .map(|d| vvcl::ast::Definition {
+            body: vvcl::eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),
+            name: d.name.clone(),
+        })
+        .collect();
+    let mut global_scope = vvcl::utils::default_global_scope();
+    global_scope.extend(vvcl::utils::map_from_defs(reduced_defs));
 
-    let init_fun = global_scope
+    let game_state = global_scope
         .get(&vvcl::utils::ident("init"))
         .unwrap()
         .clone();
-    let game_state = if let vvcl::ast::Expr::Function(f) = init_fun {
-        *f.body
-    } else {
-        panic!("init should be a function! got {init_fun:?}")
-    };
     let update_function = global_scope
         .get(&vvcl::utils::ident("update_handler"))
         .unwrap()
