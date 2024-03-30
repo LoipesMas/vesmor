@@ -63,6 +63,8 @@
           udev
           cmake
           gcc
+          nodejs
+          wasm-pack
         ];
       };
     });

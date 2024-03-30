@@ -1,0 +1,131 @@
+init = () -> Self {
+    <
+    position = < x = 0.0; y = 0.0; >;
+    speed = < x = 167.0; y = -200.0; >;
+    >
+};
+
+min = (a: Float, b: Float) -> Float {
+    ? (a <. b)
+    | True` => a;
+    | False` => b;
+};
+
+max = (a: Float, b: Float) -> Float {
+    ? (a >. b)
+    | True` => a;
+    | False` => b;
+};
+
+abs = (a: Float) -> Float {
+    ? (a >. 0.0)
+    | True` => a;
+    | False` => (0.0 -. a);
+};
+
+vec2 = (x: Float, y: Float) -> Vec2 {
+    < x = x; y = y;>
+};
+
+add_vec2s = (a: Vec2, b: Vec2) -> Vec2 {
+    < x = (@a.x +. @b.x); y = (@a.y +. @b.y);>
+};
+
+mul_vec2_scalar = (vec: Vec2, scalar: Float) -> Vec2 {
+    < x = (@vec.x *. scalar); y = (@vec.y *. scalar);>
+};
+
+draw_line = (start: Vec2, end: Vec2) -> Command {
+    Command::DrawLine` < start = start; end = end; >
+};
+
+draw_box = (center: Vec2, size: Float) -> List<Command> {
+    bot_left = < x = (@center.x +. size); y = (@center.y -. size); > ;
+    top_left = < x = (@center.x +. size); y = (@center.y +. size); > ;
+    top_right = < x = (@center.x -. size); y = (@center.y +. size); > ;
+    bot_right = < x = (@center.x -. size); y = (@center.y -. size); > ;
+    [
+        draw_line(bot_left, top_left),
+        draw_line(top_left, top_right),
+        draw_line(top_right, bot_right),
+        draw_line(bot_right, bot_left),
+    ]
+};
+
+draw_bouncer = (position: Vec2) -> List<Command> {
+    draw_box(position, 7.0)
+};
+
+draw_borders = (_: Int) -> List<Command> {
+    draw_box(< x = 0.0; y = 0.0;>, 300.0)
+};
+
+move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
+    add_vec2s(position, mul_vec2_scalar(speed, delta))
+};
+
+bounce = (position: Vec2, speed: Vec2) -> Self {
+    x_pos = @position.x;
+    y_pos = @position.y;
+    initial_x_speed = @speed.x;
+    initial_y_speed = @speed.y;
+    width = 7.0;
+    border_x_r = (300.0 -. width);
+    border_x_l = (-300.0 +. width);
+    border_y_u = (300.0 -. width);
+    border_y_d = (-300.0 +. width);
+    new_x_speed = ? (x_pos <. border_x_l)
+        | True` => abs(initial_x_speed);
+        | False` => ? (x_pos >. border_x_r)
+            | True` => (0.0 -. abs(initial_x_speed));
+            | False` => initial_x_speed;
+            ;
+        ;
+    new_y_speed = ? (y_pos <. border_y_d)
+        | True` => abs(initial_y_speed);
+        | False` => ? (y_pos >. border_y_u)
+            | True` => (0.0 -. abs(initial_y_speed));
+            | False` => initial_y_speed;
+            ;
+        ;
+    new_y_position = ? (y_pos <. border_y_d)
+        | True` => border_y_d;
+        | False` => y_pos;
+        ;
+    <
+    position = < position | y = new_y_position; >;
+    speed = vec2(new_x_speed, new_y_speed);
+    >
+};
+
+apply_gravity = (speed: Vec2, delta: Float) -> Vec2 {
+    gravity = vec2(0.0,-500.0);
+    add_vec2s(speed, mul_vec2_scalar(gravity, delta))
+};
+
+update_handler = (self: Self, delta: Float) -> SelfAndCommands {
+    moved_pos = move(@self.position, @self.speed, delta);
+    bounced = bounce(moved_pos, @self.speed);
+    gravitied_speed = apply_gravity(@bounced.speed, delta);
+    commands = (draw_bouncer(@bounced.position) ~~ draw_borders(0));
+    <
+    self = < position = @bounced.position; speed = gravitied_speed; >;
+    commands = commands;
+    >
+};
+
+jump = (self: Self) -> Self {
+    < self | speed = <@self.speed | y = max(@@self.speed.y, 400.0);>;>
+};
+
+event_handler = (self: Self, event: Event) -> SelfAndCommands {
+    new_self = ? event
+        | KeyPressed` key => ? key
+            | G` => < self | position = vec2(0.0,0.0);>;
+            | W` => jump(self);
+            | _ => self;
+            ;
+        | _ => self;
+        ;
+    <self = new_self; commands = [];>
+};
