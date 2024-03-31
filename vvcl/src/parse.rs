@@ -113,7 +113,9 @@ fn binary_operator(input: Span) -> PResult<BinaryOperator> {
     map_res(
         // HACK: order of those tags is important:
         // "+." has to be before "+", otherwise it would never be matched
-        alt_tags!("+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~", "<.", ">.", "||", "&&"),
+        alt_tags!(
+            "+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~", "<.", ">.", "||", "&&", "%"
+        ),
         |c: Span| BinaryOperator::from_str(&c),
     )(input)
 }

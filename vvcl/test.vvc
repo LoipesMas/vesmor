@@ -1,6 +1,5 @@
 main = (a: Bool, b: Int) -> Int {
-    l = [1,2,3,7,2];
-    list_size(l)
+    (15 % 12)
 };
 
 rec = (a: Int) -> Record {

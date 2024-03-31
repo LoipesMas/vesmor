@@ -266,6 +266,7 @@ fn apply_binary_operation(
         (IntSub, &Int(a), &Int(b)) => Int(a - b),
         (IntMul, &Int(a), &Int(b)) => Int(a * b),
         (IntDiv, &Int(a), &Int(b)) => Int(a / b),
+        (IntMod, &Int(a), &Int(b)) => Int(a % b),
         (FloatAdd, &Float(a), &Float(b)) => Float(a + b),
         (FloatSub, &Float(a), &Float(b)) => Float(a - b),
         (FloatMul, &Float(a), &Float(b)) => Float(a * b),
