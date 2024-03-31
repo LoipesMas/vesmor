@@ -65,7 +65,7 @@ ball_init = <
         ;
 >;
 
-ball_speed = vec2(280.0, 0.0);
+ball_speed = vec2(450.0, 0.0);
 
 rotated_ball_speed = (angle: Float) -> Vec2 {
     rotate_vec2(ball_speed, angle)
