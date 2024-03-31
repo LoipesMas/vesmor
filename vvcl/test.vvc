@@ -1,6 +1,6 @@
 main = (a: Bool, b: Int) -> Int {
-    x =rec(b);
-    @x.foo
+    l = [1,2,3,7,2];
+    list_size(l)
 };
 
 rec = (a: Int) -> Record {

@@ -91,7 +91,6 @@ pub fn list_map() -> Expr {
 
 pub fn list_get() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
-        dbg!(local_scope);
         let list = local_scope.get(&ident("list"));
         let idx = local_scope.get(&ident("idx"));
         match (list, idx) {
@@ -109,14 +108,36 @@ pub fn list_get() -> Expr {
         arguments: vec![
             ArgDef {
                 name: ident("list"),
-                typ: "List".to_owned(),
+                typ: "List<T>".to_owned(),
             },
             ArgDef {
                 name: ident("idx"),
                 typ: "Int".to_owned(),
             },
         ],
-        return_type: "Option<Int>".to_owned(),
+        return_type: "Option<T>".to_owned(),
+        body: Box::new(Expr::BuiltInFunction(bif)),
+    })
+}
+
+pub fn list_size() -> Expr {
+    fn body(local_scope: &ScopeMap) -> Expr {
+        let list = local_scope.get(&ident("list"));
+        match list {
+            Some(Expr::List(list)) => Expr::Int(list.len() as i64),
+            Some(a) if a.is_realized() => {
+                panic!("Expected List, got {:?}", a)
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    Expr::Function(Function {
+        arguments: vec![ArgDef {
+            name: ident("list"),
+            typ: "List".to_owned(),
+        }],
+        return_type: "Int".to_owned(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -127,5 +148,6 @@ pub fn scope_with_builtin_functions() -> ScopeMap {
     scope.insert(ident("int_to_str"), int_to_str());
     scope.insert(ident("list_map"), list_map());
     scope.insert(ident("list_get"), list_get());
+    scope.insert(ident("list_size"), list_size());
     scope
 }
