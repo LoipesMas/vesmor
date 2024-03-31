@@ -1,5 +1,5 @@
 main = (a: Bool, b: Int) -> Int {
-    (15 % 12)
+    sin(0.4564)
 };
 
 rec = (a: Int) -> Record {

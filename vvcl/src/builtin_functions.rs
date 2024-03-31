@@ -6,7 +6,7 @@ use crate::{
     utils::{expr_option_to_enum, ident},
 };
 
-pub fn double() -> Expr {
+fn double() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         if let Some(a) = local_scope.get(&ident("a")) {
             if let Expr::Int(a) = a {
@@ -29,7 +29,7 @@ pub fn double() -> Expr {
     })
 }
 
-pub fn int_to_str() -> Expr {
+fn int_to_str() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         if let Some(a) = local_scope.get(&ident("a")) {
             if let Expr::Int(a) = a {
@@ -52,7 +52,7 @@ pub fn int_to_str() -> Expr {
     })
 }
 
-pub fn list_map() -> Expr {
+fn list_map() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         let list = local_scope.get(&ident("list"));
         let function = local_scope.get(&ident("function"));
@@ -89,7 +89,7 @@ pub fn list_map() -> Expr {
     })
 }
 
-pub fn list_get() -> Expr {
+fn list_get() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         let list = local_scope.get(&ident("list"));
         let idx = local_scope.get(&ident("idx"));
@@ -120,7 +120,7 @@ pub fn list_get() -> Expr {
     })
 }
 
-pub fn list_size() -> Expr {
+fn list_size() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
         let list = local_scope.get(&ident("list"));
         match list {
@@ -142,6 +142,50 @@ pub fn list_size() -> Expr {
     })
 }
 
+fn sin() -> Expr {
+    fn body(local_scope: &ScopeMap) -> Expr {
+        let x = local_scope.get(&ident("x"));
+        match x {
+            Some(Expr::Float(x)) => Expr::Float(x.sin()),
+            Some(a) if a.is_realized() => {
+                panic!("Expected List, got {:?}", a)
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    Expr::Function(Function {
+        arguments: vec![ArgDef {
+            name: ident("x"),
+            typ: "Float".to_owned(),
+        }],
+        return_type: "Float".to_owned(),
+        body: Box::new(Expr::BuiltInFunction(bif)),
+    })
+}
+
+fn cos() -> Expr {
+    fn body(local_scope: &ScopeMap) -> Expr {
+        let x = local_scope.get(&ident("x"));
+        match x {
+            Some(Expr::Float(x)) => Expr::Float(x.cos()),
+            Some(a) if a.is_realized() => {
+                panic!("Expected List, got {:?}", a)
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    Expr::Function(Function {
+        arguments: vec![ArgDef {
+            name: ident("x"),
+            typ: "Float".to_owned(),
+        }],
+        return_type: "Float".to_owned(),
+        body: Box::new(Expr::BuiltInFunction(bif)),
+    })
+}
+
 pub fn scope_with_builtin_functions() -> ScopeMap {
     let mut scope = ScopeMap::new();
     scope.insert(ident("double"), double());
@@ -149,5 +193,7 @@ pub fn scope_with_builtin_functions() -> ScopeMap {
     scope.insert(ident("list_map"), list_map());
     scope.insert(ident("list_get"), list_get());
     scope.insert(ident("list_size"), list_size());
+    scope.insert(ident("sin"), sin());
+    scope.insert(ident("cos"), cos());
     scope
 }
