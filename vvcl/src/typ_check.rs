@@ -16,6 +16,13 @@ pub fn generic_option_type() -> TypeDef {
     }
 }
 
+pub fn concrete_option_type(typ: TypeDef) -> TypeDef {
+    TypeDef::Enum {
+        enu: ident("Option"),
+        variants: [(ident("None"), None), (ident("Some"), Some(typ))].into(),
+    }
+}
+
 pub fn generic_list_type() -> TypeDef {
     TypeDef::Simple {
         name: ident("List"),
@@ -91,15 +98,13 @@ pub fn check(
     expr: &Expr,
 ) -> Result<TypeDef, String> {
     let combined_scope = (global_scope, local_scope);
+    let c = |e| check(global_scope, local_scope, e);
     match expr {
         Expr::Int(_) => Ok(TypeDef::simple("Int")),
         Expr::Float(_) => Ok(TypeDef::simple("Float")),
         Expr::String(_) => Ok(TypeDef::simple("String")),
         Expr::List(list) => {
-            let types = list
-                .iter()
-                .map(|e| check(global_scope, local_scope, e))
-                .collect::<Result<Vec<_>, _>>()?;
+            let types = list.iter().map(c).collect::<Result<Vec<_>, _>>()?;
             match &types[..] {
                 [] => Ok(TypeDef::Simple {
                     name: ident("List"),
@@ -128,10 +133,7 @@ pub fn check(
         Expr::Block(b) => {
             let mut new_scope = local_scope.clone();
             for def in &b.definitions {
-                new_scope.insert(
-                    def.name.clone(),
-                    check(global_scope, local_scope, &def.body)?,
-                );
+                new_scope.insert(def.name.clone(), c(&def.body)?);
             }
             check(global_scope, &new_scope, &b.expr)
         }
@@ -157,13 +159,9 @@ pub fn check(
         }
         Expr::BuiltInFunction(_) => unreachable!("This shouldn't have been checked"),
         Expr::FunctionCall(fc) => {
-            let func_type = check(global_scope, local_scope, &fc.function)?;
+            let func_type = c(&fc.function)?;
             if let TypeDef::Function { args, return_type } = func_type {
-                let call_arg_types = fc
-                    .arguments
-                    .iter()
-                    .map(|a| check(global_scope, local_scope, a))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let call_arg_types = fc.arguments.iter().map(c).collect::<Result<Vec<_>, _>>()?;
                 match call_arg_types.len().cmp(&args.len()) {
                     std::cmp::Ordering::Greater => {
                         Err("Called function with too many arguments".to_string())
@@ -193,10 +191,10 @@ pub fn check(
         Expr::Record(r) => {
             let mut new_types = HashMap::new();
             for (k, v) in r.update.iter() {
-                new_types.insert(k.clone(), check(global_scope, local_scope, v)?);
+                new_types.insert(k.clone(), c(v)?);
             }
             if let Some(base) = &r.base {
-                let base_type = check(global_scope, local_scope, base)?;
+                let base_type = c(base)?;
                 if let TypeDef::Record(base_r) = base_type {
                     for (k, v) in base_r.iter() {
                         if let Some(new_type) = new_types.insert(k.clone(), v.clone()) {
@@ -218,7 +216,7 @@ pub fn check(
             }
         }
         Expr::RecordAccess(ra) => {
-            let rec_type = check(global_scope, local_scope, &ra.record)?;
+            let rec_type = c(&ra.record)?;
             if let TypeDef::Record(ref map) = rec_type {
                 if let Some(t) = map.get(&ra.member) {
                     Ok(t.clone())
@@ -235,9 +233,32 @@ pub fn check(
                 ))
             }
         }
-        Expr::EnumVariant(_) => todo!(),
+        Expr::EnumVariant(ev) => {
+            if ev.enu.0 == "Option" {
+                match ev.variant.0.as_str() {
+                    "None" => {
+                        if ev.body.is_some() {
+                            Err("Option::None can't have a body!".to_owned())
+                        } else {
+                            Ok(generic_option_type())
+                        }
+                    }
+                    "Some" => {
+                        if let Some(body) = &ev.body {
+                            let body_type = c(body)?;
+                            Ok(concrete_option_type(body_type))
+                        } else {
+                            Err("Option::Some requires a body!".to_owned())
+                        }
+                    }
+                    v => Err(format!("Invalid variant '{v}' of enum 'Option'")),
+                }
+            } else {
+                // would have to get enum def from some storage..
+                Err("Enum other than Option not implemented yet.".to_owned())
+            }
+        }
         Expr::EnumMatching(_) => todo!(),
-        _ => todo!("{expr:?}"),
     }
 }
 

@@ -1,4 +1,3 @@
 main = (a: Bool, b: Int) -> Int {
-    r = < foo = a;>;
-    @r.foo
+    Option::Some` b
 };
