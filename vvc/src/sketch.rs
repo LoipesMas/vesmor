@@ -1,4 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, str::FromStr};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use nannou::{
     prelude::*,
@@ -82,6 +86,7 @@ pub struct Model {
     line_weight: f32,
     commands: Vec<Command>,
     runtime: Runtime,
+    pressed_keys: HashSet<Key>,
 }
 
 struct Runtime {
@@ -136,7 +141,33 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
         event_function,
     }
 }
+
+fn key_down(model: &mut Model, key: Key) {
+    let key_str = format!("{key:?}");
+    let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
+    let event_enum = vvcl::utils::enum_variant("Event", "KeyDown", Some(key_enum));
+
+    let mut local_scope = vvcl::eval::ScopeMap::new();
+    local_scope.insert(vvcl::utils::ident("event"), event_enum);
+    local_scope.insert(vvcl::utils::ident("game"), model.runtime.game_state.clone());
+
+    let evaled = vvcl::eval::beta_reduction(
+        &model.runtime.global_scope,
+        &local_scope,
+        &model.runtime.event_function,
+    );
+
+    let (game_state, commands) = extract_state_and_commands(evaled);
+    model.runtime.game_state = game_state;
+    model.commands.extend(commands);
+}
+
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
+    let was_present = model.pressed_keys.insert(key);
+    if was_present {
+        // only send event if key wasn't already pressed
+        return;
+    }
     let key_str = format!("{key:?}");
     let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
     let event_enum = vvcl::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
@@ -153,7 +184,11 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 
     let (game_state, commands) = extract_state_and_commands(evaled);
     model.runtime.game_state = game_state;
-    model.commands = commands;
+    model.commands.extend(commands);
+}
+
+fn key_released(app: &App, model: &mut Model, key: Key) {
+    model.pressed_keys.remove(&key);
 }
 
 pub fn model(app: &App) -> Model {
@@ -164,6 +199,7 @@ pub fn model(app: &App) -> Model {
             line_weight: 4.0,
             commands: vec![],
             runtime: init_runtime(sc),
+            pressed_keys: HashSet::new(),
         }
     })
 }
@@ -224,6 +260,10 @@ fn update(_app: &App, model: &mut Model, update: Update) {
 
     model.runtime.game_state = game_state;
     model.commands = commands;
+
+    for key in model.pressed_keys.clone() {
+        key_down(model, key)
+    }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -255,6 +295,7 @@ pub async fn run_app() {
     })
     .backends(Backends::PRIMARY | Backends::GL)
     .update(update)
+    .loop_mode(LoopMode::rate_fps(60.0))
     .run_async()
     .await;
 }
@@ -274,7 +315,7 @@ async fn create_window(app: &App) {
         .title("VVC")
         // .raw_event(raw_event)
         .key_pressed(key_pressed)
-        // .key_released(key_released)
+        .key_released(key_released)
         // .mouse_pressed(mouse_pressed)
         // .mouse_moved(mouse_moved)
         // .mouse_released(mouse_released)

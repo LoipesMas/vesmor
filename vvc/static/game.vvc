@@ -65,7 +65,7 @@ ball_init = <
         ;
 >;
 
-ball_speed = vec2(222.0, 0.0);
+ball_speed = vec2(280.0, 0.0);
 
 rotated_ball_speed = (angle: Float) -> Vec2 {
     rotate_vec2(ball_speed, angle)
@@ -90,7 +90,7 @@ ball_size_half = (ball_size /. 2.0);
 player_size = 75.0;
 player_size_half = (player_size /. 2.0);
 player_offset = 325.0;
-player_move_speed = 16.0;
+player_move_speed = 3.0;
 
 arena_size_half = 360.0;
 
@@ -187,7 +187,7 @@ update_handler = (game: Game, delta: Float) -> GameAndCommands {
 
 event_handler = (game: Game, event: Event) -> GameAndCommands {
     new_game = ? event
-        | KeyPressed` key => ? key
+        | KeyDown` key => ? key
             | W` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, player_move_speed));>;
             | F` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, neg(player_move_speed)));>;
             | U` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, player_move_speed));>;
