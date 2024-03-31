@@ -172,15 +172,29 @@ check_goals = (game: Game) -> Game {
         | False` => game;
 };
 
+clamp_player_pos = (pos: Vec2) -> Vec2 {
+    pos_y = @pos.y;
+    new_pos_y = ? (pos_y <. neg(arena_size_half))
+        | True` => neg(arena_size_half);
+        | False` => ? (pos_y >. arena_size_half)
+            | True` => arena_size_half;
+            | False` => pos_y;
+            ;
+        ;
+    < pos | y = new_pos_y;>
+};
+
 update_handler = (game: Game, delta: Float) -> GameAndCommands {
     ball = ball_movement(game, delta);
     checked_game = check_goals(<game | ball = ball;>);
     ball_commands = draw_ball(@@checked_game.ball.position);
-    left_p_commands = draw_player(@game.player_left);
-    right_p_commands = draw_player(@game.player_right);
+    clamped_l_pl = clamp_player_pos(@game.player_left);
+    clamped_r_pl = clamp_player_pos(@game.player_right);
+    left_p_commands = draw_player(clamped_l_pl);
+    right_p_commands = draw_player(clamped_r_pl);
     commands = (ball_commands ~~ (left_p_commands ~~ right_p_commands));
     <
-    game = checked_game;
+    game = < checked_game | player_left = clamped_l_pl; player_right = clamped_r_pl;>;
     commands = commands;
     >
 };
