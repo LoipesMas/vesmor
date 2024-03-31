@@ -49,13 +49,24 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
 
 ball_init = <
     position = vec2(0.0, 0.0);
-    speed = vec2(200.0, 100.0);
+    speed = ? list_get(ball_speeds, 0)
+        | Some` speed => speed;
+        | None` => vec2(200.0,100.0);
+        ;
 >;
+
+ball_speeds = [
+    vec2(200.0, 100.0),
+    vec2(-200.0, -100.0),
+    vec2(200.0, -100.0),
+    vec2(-200.0, 100.0),
+];
 
 init = <
         player_left = vec2(neg(player_offset),0.0);
         player_right = vec2(player_offset,0.0);
         ball = ball_init;
+        round = 0;
      >
 ;
 
@@ -126,19 +137,36 @@ ball_movement = (game: Game, delta: Float) -> Ball {
     bounced_ball_speed_both = bounce_ball_player(newer_game, Side::Left`);
     bounced_ball_both_sides = < speed = bounced_ball_speed_both; position = moved_ball_pos;>;
     bounced_ball_final = < position = moved_ball_pos; speed = bounce_ball_ceiling(bounced_ball_both_sides);>;
-    ? ((@moved_ball_pos.x <. neg(arena_size_half)) || (@moved_ball_pos.x >. arena_size_half))
-        | True` => ball_init;
-        | False` => bounced_ball_final;
+    bounced_ball_final
+};
+
+next_round = (game: Game) -> Game {
+    round = (@game.round + 1);
+    ball_speed_idx = (round % list_size(ball_speeds));
+    ball_speed = ? list_get(ball_speeds, ball_speed_idx)
+        | Some` speed => speed;
+        | None` => vec2(0.0, 0.0);
+        ;
+    ball_pos = vec2(0.0,0.0);
+    < game | round = round; ball = < position = ball_pos; speed = ball_speed;>;>
+};
+
+check_goals = (game: Game) -> Game {
+    ball_pos = @@game.ball.position;
+    ? ((@ball_pos.x <. neg(arena_size_half)) || (@ball_pos.x >. arena_size_half))
+        | True` => next_round(game);
+        | False` => game;
 };
 
 update_handler = (game: Game, delta: Float) -> GameAndCommands {
     ball = ball_movement(game, delta);
-    ball_commands = draw_ball(@ball.position);
+    checked_game = check_goals(<game | ball = ball;>);
+    ball_commands = draw_ball(@@checked_game.ball.position);
     left_p_commands = draw_player(@game.player_left);
     right_p_commands = draw_player(@game.player_right);
     commands = (ball_commands ~~ (left_p_commands ~~ right_p_commands));
     <
-    game = < game | ball = ball;>;
+    game = checked_game;
     commands = commands;
     >
 };
