@@ -89,10 +89,12 @@ ball_size_half = (ball_size /. 2.0);
 
 player_size = 75.0;
 player_size_half = (player_size /. 2.0);
-player_offset = 325.0;
+player_offset = 300.0;
 player_move_speed = 3.0;
 
-arena_size_half = 360.0;
+arena_size_half = 325.0;
+
+draw_arena = draw_box(vec2(0.0,0.0), arena_size_half);
 
 draw_ball = (position: Vec2) -> List<Command> {
     draw_box(position, ball_size)
@@ -174,13 +176,8 @@ check_goals = (game: Game) -> Game {
 
 clamp_player_pos = (pos: Vec2) -> Vec2 {
     pos_y = @pos.y;
-    new_pos_y = ? (pos_y <. neg(arena_size_half))
-        | True` => neg(arena_size_half);
-        | False` => ? (pos_y >. arena_size_half)
-            | True` => arena_size_half;
-            | False` => pos_y;
-            ;
-        ;
+    inner_arena_size = (arena_size_half -. player_size_half);
+    new_pos_y = min(inner_arena_size, max(neg(inner_arena_size), pos_y));
     < pos | y = new_pos_y;>
 };
 
@@ -192,7 +189,7 @@ update_handler = (game: Game, delta: Float) -> GameAndCommands {
     clamped_r_pl = clamp_player_pos(@game.player_right);
     left_p_commands = draw_player(clamped_l_pl);
     right_p_commands = draw_player(clamped_r_pl);
-    commands = (ball_commands ~~ (left_p_commands ~~ right_p_commands));
+    commands = ((ball_commands ~~ draw_arena) ~~ (left_p_commands ~~ right_p_commands));
     <
     game = < checked_game | player_left = clamped_l_pl; player_right = clamped_r_pl;>;
     commands = commands;
