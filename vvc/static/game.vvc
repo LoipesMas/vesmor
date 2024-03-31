@@ -30,6 +30,16 @@ mul_vec2_scalar = (vec: Vec2, scalar: Float) -> Vec2 {
     < x = (@vec.x *. scalar); y = (@vec.y *. scalar);>
 };
 
+rotate_vec2 = (v: Vec2, a: Float) -> Vec2 {
+    x = @v.x;
+    y = @v.y;
+    <
+        x = ((cos(a) *. x) -. (sin(a) *. y));
+        y = ((sin(a) *. x) +. (cos(a) *. y));
+    >
+};
+
+
 draw_line = (start: Vec2, end: Vec2) -> Command {
     Command::DrawLine` < start = start; end = end; >
 };
@@ -55,12 +65,16 @@ ball_init = <
         ;
 >;
 
-ball_speeds = [
-    vec2(200.0, 100.0),
-    vec2(-200.0, -100.0),
-    vec2(200.0, -100.0),
-    vec2(-200.0, 100.0),
-];
+ball_speed = vec2(222.0, 0.0);
+
+rotated_ball_speed = (angle: Float) -> Vec2 {
+    rotate_vec2(ball_speed, angle)
+};
+
+ball_speeds = list_map(
+    [ 0.3, 2.7, -0.9, 4.0, -0.5, 2.5, 1.1, -2.2],
+    rotated_ball_speed
+);
 
 init = <
         player_left = vec2(neg(player_offset),0.0);
@@ -143,12 +157,12 @@ ball_movement = (game: Game, delta: Float) -> Ball {
 next_round = (game: Game) -> Game {
     round = (@game.round + 1);
     ball_speed_idx = (round % list_size(ball_speeds));
-    ball_speed = ? list_get(ball_speeds, ball_speed_idx)
+    new_ball_speed = ? list_get(ball_speeds, ball_speed_idx)
         | Some` speed => speed;
         | None` => vec2(0.0, 0.0);
         ;
     ball_pos = vec2(0.0,0.0);
-    < game | round = round; ball = < position = ball_pos; speed = ball_speed;>;>
+    < game | round = round; ball = < position = ball_pos; speed = new_ball_speed;>;>
 };
 
 check_goals = (game: Game) -> Game {
