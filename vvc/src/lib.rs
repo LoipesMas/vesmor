@@ -23,6 +23,7 @@ pub async fn update_source_code(code: &str, hot_reload: bool) -> String {
     match vvcl::parse::top_definitions(code) {
         Ok((input, _defs)) => {
             if input.is_empty() {
+                // TODO: check if init, update_handler and event_handler are correctly defined
                 let ret = "Parsing successful!".to_owned();
                 SOURCE_CODE.with_borrow_mut(|sc| {
                     sc.code = code.to_string();

@@ -13,8 +13,10 @@ max = (a: Float, b: Float) -> Float {
 abs = (a: Float) -> Float {
     ? (a >. 0.0)
     | True` => a;
-    | False` => (0.0 -. a);
+    | False` => neg(a);
 };
+
+neg = (a: Float) -> Float (0.0 -. a);
 
 vec2 = (x: Float, y: Float) -> Vec2 {
     < x = x; y = y;>
@@ -45,89 +47,113 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
     ]
 };
 
+ball_init = <
+    position = vec2(0.0, 0.0);
+    speed = vec2(200.0, 100.0);
+>;
+
 init = <
-        position = < x = 0.0; y = 0.0; >;
-        speed = < x = 167.0; y = -200.0; >;
+        player_left = vec2(neg(player_offset),0.0);
+        player_right = vec2(player_offset,0.0);
+        ball = ball_init;
      >
 ;
 
-box_size = 300.0;
-bouncer_size = 20.0;
-jump_force = 500.0;
-gravity = vec2(0.0,-700.0);
+ball_size = 5.0;
+ball_size_half = (ball_size /. 2.0);
 
-draw_bouncer = (position: Vec2) -> List<Command> {
-    draw_box(position, bouncer_size)
+player_size = 75.0;
+player_size_half = (player_size /. 2.0);
+player_offset = 325.0;
+player_move_speed = 16.0;
+
+arena_size_half = 360.0;
+
+draw_ball = (position: Vec2) -> List<Command> {
+    draw_box(position, ball_size)
 };
 
-draw_borders = draw_box(< x = 0.0; y = 0.0;>, box_size);
+draw_player = (position: Vec2) -> List<Command> {
+    bottom = < position | y = (@position.y -. player_size_half);>;
+    top = < position | y = (@position.y +. player_size_half);>;
+    [ draw_line(bottom, top) ]
+};
 
 move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
     add_vec2s(position, mul_vec2_scalar(speed, delta))
 };
 
-bounce = (position: Vec2, speed: Vec2) -> Self {
-    x_pos = @position.x;
-    y_pos = @position.y;
-    initial_x_speed = @speed.x;
-    initial_y_speed = @speed.y;
-    border_pos = (box_size -. bouncer_size);
-    border_x_r = border_pos;
-    border_x_l = (0.0 -. border_pos);
-    border_y_u = border_pos;
-    border_y_d = (0.0 -. border_pos);
-    new_x_speed = ? (x_pos <. border_x_l)
-        | True` => abs(initial_x_speed);
-        | False` => ? (x_pos >. border_x_r)
-            | True` => (0.0 -. abs(initial_x_speed));
-            | False` => initial_x_speed;
-            ;
-        ;
-    new_y_speed = ? (y_pos <. border_y_d)
-        | True` => abs(initial_y_speed);
-        | False` => ? (y_pos >. border_y_u)
-            | True` => (0.0 -. abs(initial_y_speed));
-            | False` => initial_y_speed;
-            ;
-        ;
-    new_y_position = ? (y_pos <. border_y_d)
-        | True` => border_y_d;
-        | False` => y_pos;
-        ;
-    <
-    position = < position | y = new_y_position; >;
-    speed = vec2(new_x_speed, new_y_speed);
-    >
+check_player_ball_collision = (ball_pos: Vec2,player_pos: Vec2) -> Bool {
+    y_check = (abs((@player_pos.y -. @ball_pos.y)) <. player_size_half);
+    x_check = (abs((@player_pos.x -. @ball_pos.x)) <. ball_size_half);
+    (y_check && x_check)
 };
 
-apply_gravity = (speed: Vec2, delta: Float) -> Vec2 {
-    add_vec2s(speed, mul_vec2_scalar(gravity, delta))
+bounce_ball_player = (game: Game, side: Side) -> Vec2 {
+    ball = @game.ball;
+    speed = @ball.speed;
+    player_pos = ? side
+        | Left` => @game.player_left;
+        | Right` => @game.player_right;
+        ;
+    ? check_player_ball_collision(@ball.position, player_pos)
+    | True` => ? side
+        | Left` => < speed | x = abs(@speed.x);>;
+        | Right` => < speed | x = neg(abs(@speed.x));>;
+        ;
+    | False` => @ball.speed;
 };
 
-update_handler = (self: Self, delta: Float) -> SelfAndCommands {
-    moved_pos = move(@self.position, @self.speed, delta);
-    bounced = bounce(moved_pos, @self.speed);
-    gravitied_speed = apply_gravity(@bounced.speed, delta);
-    commands = (draw_bouncer(@bounced.position) ~~ draw_borders);
+bounce_ball_ceiling = (ball: Ball) -> Vec2 {
+    pos_y = @@ball.position.y;
+    speed = @ball.speed;
+    ? (pos_y <. neg(arena_size_half))
+    | True` => < speed | y = abs(@speed.y);>;
+    | False` => ? (pos_y >. arena_size_half)
+        | True` => < speed | y = neg(abs(@speed.y));>;
+        | False` => speed;
+        ;
+};
+
+ball_movement = (game: Game, delta: Float) -> Ball {
+    ball = @game.ball;
+    moved_ball_pos = move(@ball.position, @ball.speed, delta);
+    moved_ball = < ball | position = moved_ball_pos; >;
+    new_game = < game | ball = moved_ball;>;
+    bounced_ball_speed_right = bounce_ball_player(new_game, Side::Right`);
+    bounced_ball_right = < moved_ball | speed = bounced_ball_speed_right;>;
+    newer_game = < new_game | ball = bounced_ball_right;>;
+    bounced_ball_speed_both = bounce_ball_player(newer_game, Side::Left`);
+    bounced_ball_both_sides = < speed = bounced_ball_speed_both; position = moved_ball_pos;>;
+    bounced_ball_final = < position = moved_ball_pos; speed = bounce_ball_ceiling(bounced_ball_both_sides);>;
+    ? ((@moved_ball_pos.x <. neg(arena_size_half)) || (@moved_ball_pos.x >. arena_size_half))
+        | True` => ball_init;
+        | False` => bounced_ball_final;
+};
+
+update_handler = (game: Game, delta: Float) -> GameAndCommands {
+    ball = ball_movement(game, delta);
+    ball_commands = draw_ball(@ball.position);
+    left_p_commands = draw_player(@game.player_left);
+    right_p_commands = draw_player(@game.player_right);
+    commands = (ball_commands ~~ (left_p_commands ~~ right_p_commands));
     <
-    self = < position = @bounced.position; speed = gravitied_speed; >;
+    game = < game | ball = ball;>;
     commands = commands;
     >
 };
 
-jump = (self: Self) -> Self {
-    < self | speed = <@self.speed | y = max(@@self.speed.y, jump_force);>;>
-};
-
-event_handler = (self: Self, event: Event) -> SelfAndCommands {
-    new_self = ? event
+event_handler = (game: Game, event: Event) -> GameAndCommands {
+    new_game = ? event
         | KeyPressed` key => ? key
-            | G` => < self | position = vec2(0.0,0.0);>;
-            | W` => jump(self);
-            | _ => self;
+            | W` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, player_move_speed));>;
+            | F` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, neg(player_move_speed)));>;
+            | U` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, player_move_speed));>;
+            | Y` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, neg(player_move_speed)));>;
+            | _ => game;
             ;
-        | _ => self;
+        | _ => game;
         ;
-    <self = new_self; commands = [];>
+    <game = new_game; commands = [];>
 };
 

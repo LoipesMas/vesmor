@@ -16,7 +16,7 @@ pub struct SourceCode {
 impl Default for SourceCode {
     fn default() -> Self {
         Self {
-            code: include_str!("../game.vvc").to_string(),
+            code: include_str!("../static/game.vvc").to_string(),
             acknowledged: false,
             hot_reload: false,
         }
@@ -143,7 +143,7 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 
     let mut local_scope = vvcl::eval::ScopeMap::new();
     local_scope.insert(vvcl::utils::ident("event"), event_enum);
-    local_scope.insert(vvcl::utils::ident("self"), model.runtime.game_state.clone());
+    local_scope.insert(vvcl::utils::ident("game"), model.runtime.game_state.clone());
 
     let evaled = vvcl::eval::beta_reduction(
         &model.runtime.global_scope,
@@ -171,7 +171,7 @@ pub fn model(app: &App) -> Model {
 fn extract_state_and_commands(function: vvcl::ast::Expr) -> (vvcl::ast::Expr, Vec<Command>) {
     if let vvcl::ast::Expr::Function(f) = function {
         if let vvcl::ast::Expr::Record(r) = *f.body {
-            let game_state = r.get(&vvcl::utils::ident("self")).unwrap().clone();
+            let game_state = r.get(&vvcl::utils::ident("game")).unwrap().clone();
             let commands =
                 if let vvcl::ast::Expr::List(l) = r.get(&vvcl::utils::ident("commands")).unwrap() {
                     let mut ret = vec![];
@@ -212,7 +212,7 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
     let mut local_scope = vvcl::eval::ScopeMap::new();
     local_scope.insert(vvcl::utils::ident("delta"), vvcl::ast::Expr::Float(delta));
-    local_scope.insert(vvcl::utils::ident("self"), model.runtime.game_state.clone());
+    local_scope.insert(vvcl::utils::ident("game"), model.runtime.game_state.clone());
 
     let updated = vvcl::eval::beta_reduction(
         &model.runtime.global_scope,
