@@ -187,13 +187,14 @@ fn cos() -> Expr {
 }
 
 pub fn scope_with_builtin_functions() -> ScopeMap {
-    let mut scope = ScopeMap::new();
-    scope.insert(ident("double"), double());
-    scope.insert(ident("int_to_str"), int_to_str());
-    scope.insert(ident("list_map"), list_map());
-    scope.insert(ident("list_get"), list_get());
-    scope.insert(ident("list_size"), list_size());
-    scope.insert(ident("sin"), sin());
-    scope.insert(ident("cos"), cos());
-    scope
+    [
+        (ident("double"), double()),
+        (ident("int_to_str"), int_to_str()),
+        (ident("list_map"), list_map()),
+        (ident("list_get"), list_get()),
+        (ident("list_size"), list_size()),
+        (ident("sin"), sin()),
+        (ident("cos"), cos()),
+    ]
+    .into()
 }
