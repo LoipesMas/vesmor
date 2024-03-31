@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use crate::eval::ScopeMap;
+use crate::typ_check::TypeDef;
 
 // TODO: try changing Box for Rc and test performance
 
@@ -73,13 +74,13 @@ pub struct BinaryOperation {
 #[derive(Debug, Clone)]
 pub struct ArgDef {
     pub name: Ident,
-    pub typ: String,
+    pub typ: TypeDef,
 }
 
 #[derive(Debug, Clone)]
 pub struct Function {
     pub arguments: Vec<ArgDef>,
-    pub return_type: String,
+    pub return_type: TypeDef,
     pub body: Box<Expr>,
 }
 

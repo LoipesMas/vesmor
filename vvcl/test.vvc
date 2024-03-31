@@ -1,7 +1,4 @@
 main = (a: Bool, b: Int) -> Int {
-    sin(0.4564)
-};
-
-rec = (a: Int) -> Record {
-    < x = 5; foo = (a*7); r = <a=5;>;>
+    r = < foo = a;>;
+    @r.foo
 };

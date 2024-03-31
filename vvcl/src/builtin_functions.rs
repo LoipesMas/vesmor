@@ -3,6 +3,7 @@
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
+    typ_check::{generic_list_type, generic_option_type, TypeDef},
     utils::{expr_option_to_enum, ident},
 };
 
@@ -22,9 +23,9 @@ fn double() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: "Int".to_owned(),
+            typ: TypeDef::simple("Int"),
         }],
-        return_type: "Int".to_owned(),
+        return_type: TypeDef::simple("Int"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -45,9 +46,9 @@ fn int_to_str() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: "Int".to_owned(),
+            typ: TypeDef::simple("Int"),
         }],
-        return_type: "String".to_owned(),
+        return_type: TypeDef::simple("String"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -77,14 +78,18 @@ fn list_map() -> Expr {
         arguments: vec![
             ArgDef {
                 name: ident("list"),
-                typ: "List".to_owned(),
+                typ: generic_list_type(),
             },
             ArgDef {
                 name: ident("function"),
-                typ: "Function".to_owned(),
+                typ: TypeDef::Function {
+                    args: vec![TypeDef::simple("T")],
+                    // TODO: fix those types
+                    return_type: Box::new(TypeDef::simple("T")),
+                },
             },
         ],
-        return_type: "String".to_owned(),
+        return_type: TypeDef::simple("T"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -108,14 +113,14 @@ fn list_get() -> Expr {
         arguments: vec![
             ArgDef {
                 name: ident("list"),
-                typ: "List<T>".to_owned(),
+                typ: generic_list_type(),
             },
             ArgDef {
                 name: ident("idx"),
-                typ: "Int".to_owned(),
+                typ: TypeDef::simple("Int"),
             },
         ],
-        return_type: "Option<T>".to_owned(),
+        return_type: generic_option_type(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -135,9 +140,9 @@ fn list_size() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("list"),
-            typ: "List".to_owned(),
+            typ: generic_list_type(),
         }],
-        return_type: "Int".to_owned(),
+        return_type: TypeDef::simple("Int"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -157,9 +162,9 @@ fn sin() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("x"),
-            typ: "Float".to_owned(),
+            typ: TypeDef::simple("Float"),
         }],
-        return_type: "Float".to_owned(),
+        return_type: TypeDef::simple("Float"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -179,9 +184,9 @@ fn cos() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("x"),
-            typ: "Float".to_owned(),
+            typ: TypeDef::simple("Float"),
         }],
-        return_type: "Float".to_owned(),
+        return_type: TypeDef::simple("Float"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }

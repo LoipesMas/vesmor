@@ -2,7 +2,7 @@
 
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_till, take_until, take_while},
+    bytes::complete::{tag, take_until, take_while},
     character::{complete::alphanumeric1, is_alphabetic},
     combinator::{map, map_res, opt, recognize},
     multi::{many0, many0_count, many1, separated_list0},
@@ -12,11 +12,14 @@ use nom::{
 use nom_locate::LocatedSpan;
 use nom_recursive::{recursive_parser, RecursiveInfo};
 
-use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
-    EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
-};
 use crate::utils::map_from_defs;
+use crate::{
+    ast::{
+        ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
+        EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+    },
+    typ_check::TypeDef,
+};
 
 type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
 
@@ -40,15 +43,23 @@ fn ident(input: Span) -> PResult<Ident> {
     )(input)
 }
 
-fn arg_def(input: Span) -> PResult<ArgDef> {
-    let (input, (name, typ)) = separated_pair(ident, tag(":"), type_name)(input)?;
-    Ok((
-        input,
-        ArgDef {
+fn simple_typ(input: Span) -> PResult<TypeDef> {
+    map(
+        pair(ident, opt(delimited(tag("<"), typ, tag(">")))),
+        |(name, subtype)| TypeDef::Simple {
             name,
-            typ: typ.trim().to_owned(),
+            subtype: subtype.map(Box::new),
         },
-    ))
+    )(input)
+}
+
+fn typ(input: Span) -> PResult<TypeDef> {
+    alt((simple_typ,))(input)
+}
+
+fn arg_def(input: Span) -> PResult<ArgDef> {
+    let (input, (name, typ)) = separated_pair(ident, tag(":"), typ)(input)?;
+    Ok((input, ArgDef { name, typ }))
 }
 
 fn definition(input: Span) -> PResult<Definition> {
@@ -266,7 +277,7 @@ fn fun(input: Span) -> PResult<Function> {
             separated_pair(
                 delimited(tag("("), separated_list0(tag(","), arg_def), tag(")")),
                 tag("->"),
-                type_name,
+                typ,
             ),
             map(expr, Box::new),
         ),

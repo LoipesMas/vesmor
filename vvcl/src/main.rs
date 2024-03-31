@@ -6,6 +6,7 @@ mod eval;
 mod parse;
 mod utils;
 use utils::ident;
+mod typ_check;
 
 use ast::Definition;
 use utils::{default_global_scope, wrap_in_span};
@@ -33,6 +34,16 @@ fn main() {
         eprintln!("parsing failed! input left:\n{input}");
         return;
     }
+
+    for def in &defs {
+        dbg!(typ_check::check(
+            &HashMap::new(),
+            &HashMap::new(),
+            &def.body
+        ))
+        .unwrap();
+    }
+    return;
 
     // 1st pass of "compilation"
     // without global scope
