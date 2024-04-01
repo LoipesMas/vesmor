@@ -12,11 +12,14 @@ use nom::{
 use nom_locate::LocatedSpan;
 use nom_recursive::{recursive_parser, RecursiveInfo};
 
-use crate::ast::{
-    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
-    EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+use crate::{
+    ast::{
+        ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
+        EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+    },
+    typ_check::{FunctionTypeName, TypeName},
 };
-use crate::{typ_check::TypeName, utils::map_from_defs};
+use crate::{typ_check::NormalTypeName, utils::map_from_defs};
 
 type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
 
@@ -40,14 +43,43 @@ fn ident(input: Span) -> PResult<Ident> {
     )(input)
 }
 
-fn type_name(input: Span) -> PResult<TypeName> {
+fn normal_type_name(input: Span) -> PResult<NormalTypeName> {
     map(
-        pair(ident, opt(delimited(tag("<"), type_name, tag(">")))),
-        |(name, subtype)| TypeName {
+        pair(ident, opt(delimited(tag("<"), normal_type_name, tag(">")))),
+        |(name, subtype)| NormalTypeName {
             name,
             subtype: subtype.map(Box::new),
         },
     )(input)
+}
+
+fn function_type_name(input: Span) -> PResult<FunctionTypeName> {
+    map(
+        preceded(
+            tag("Fun"),
+            delimited(
+                tag("<"),
+                separated_pair(
+                    delimited(
+                        tag("("),
+                        separated_list0(tag(","), normal_type_name),
+                        tag(")"),
+                    ),
+                    tag("->"),
+                    normal_type_name,
+                ),
+                tag(">"),
+            ),
+        ),
+        |(args, return_type)| FunctionTypeName { args, return_type },
+    )(input)
+}
+
+fn type_name(input: Span) -> PResult<TypeName> {
+    alt((
+        map(function_type_name, TypeName::Function),
+        map(normal_type_name, TypeName::Normal),
+    ))(input)
 }
 
 fn arg_def(input: Span) -> PResult<ArgDef> {
@@ -263,14 +295,14 @@ fn fun(input: Span) -> PResult<Function> {
             separated_pair(
                 delimited(tag("("), separated_list0(tag(","), arg_def), tag(")")),
                 tag("->"),
-                type_name,
+                normal_type_name,
             ),
             map(expr, Box::new),
         ),
         |((arguments, return_type), body)| Function {
             arguments,
             body,
-            return_type,
+            return_type: TypeName::Normal(return_type),
         },
     )(input)
 }

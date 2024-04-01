@@ -4,31 +4,31 @@ use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
     typ_check::{
-        generic_list_type, generic_list_type_name, generic_option_type, type_hole_name, Type,
-        TypeName,
+        generic_list_type_name, generic_option_type_name, type_hole_name, FunctionTypeName,
+        NormalTypeName, TypeName,
     },
     utils::{expr_option_to_enum, ident},
 };
 
-fn int_type() -> TypeName {
-    TypeName {
+fn int_type_name() -> TypeName {
+    TypeName::Normal(NormalTypeName {
         name: ident("Int"),
         subtype: None,
-    }
+    })
 }
 
-fn float_type() -> TypeName {
-    TypeName {
+fn float_type_name() -> TypeName {
+    TypeName::Normal(NormalTypeName {
         name: ident("Float"),
         subtype: None,
-    }
+    })
 }
 
-fn string_type() -> TypeName {
-    TypeName {
+fn string_type_name() -> TypeName {
+    TypeName::Normal(NormalTypeName {
         name: ident("String"),
         subtype: None,
-    }
+    })
 }
 
 fn double() -> Expr {
@@ -47,9 +47,9 @@ fn double() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: int_type(),
+            typ: int_type_name(),
         }],
-        return_type: int_type(),
+        return_type: int_type_name(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -70,9 +70,9 @@ fn int_to_str() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: int_type(),
+            typ: int_type_name(),
         }],
-        return_type: string_type(),
+        return_type: string_type_name(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -106,14 +106,19 @@ fn list_map() -> Expr {
             },
             ArgDef {
                 name: ident("function"),
-                typ: Type::Function {
-                    args: vec![type_hole_name()],
-                    // TODO: fix those types
-                    return_type: Box::new(Type::simple("T")),
-                },
+                typ: TypeName::Function(FunctionTypeName {
+                    args: vec![NormalTypeName {
+                        name: ident("_"),
+                        subtype: None,
+                    }],
+                    return_type: NormalTypeName {
+                        name: ident("_"),
+                        subtype: None,
+                    },
+                }),
             },
         ],
-        return_type: Type::simple("T"),
+        return_type: TypeName::Normal(type_hole_name()),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -137,14 +142,14 @@ fn list_get() -> Expr {
         arguments: vec![
             ArgDef {
                 name: ident("list"),
-                typ: generic_list_type(),
+                typ: generic_list_type_name(),
             },
             ArgDef {
                 name: ident("idx"),
-                typ: Type::simple("Int"),
+                typ: int_type_name(),
             },
         ],
-        return_type: generic_option_type(),
+        return_type: generic_option_type_name(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -164,9 +169,9 @@ fn list_size() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("list"),
-            typ: generic_list_type(),
+            typ: generic_list_type_name(),
         }],
-        return_type: Type::simple("Int"),
+        return_type: int_type_name(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -186,9 +191,9 @@ fn sin() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("x"),
-            typ: Type::simple("Float"),
+            typ: float_type_name(),
         }],
-        return_type: Type::simple("Float"),
+        return_type: float_type_name(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -208,9 +213,9 @@ fn cos() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("x"),
-            typ: Type::simple("Float"),
+            typ: float_type_name(),
         }],
-        return_type: Type::simple("Float"),
+        return_type: float_type_name(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }

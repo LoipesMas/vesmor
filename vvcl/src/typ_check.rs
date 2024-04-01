@@ -12,6 +12,13 @@ pub fn generic_option_type() -> Type {
     }
 }
 
+pub fn generic_option_type_name() -> TypeName {
+    TypeName::Normal(NormalTypeName {
+        name: ident("Option"),
+        subtype: Some(Box::new(type_hole_name())),
+    })
+}
+
 pub fn concrete_option_type(typ: Type) -> Type {
     Type::Enum {
         enu: ident("Option"),
@@ -26,18 +33,18 @@ pub fn generic_list_type() -> Type {
     }
 }
 
-pub fn type_hole_name() -> TypeName {
-    TypeName {
+pub fn type_hole_name() -> NormalTypeName {
+    NormalTypeName {
         name: ident("_"),
         subtype: None,
     }
 }
 
 pub fn generic_list_type_name() -> TypeName {
-    TypeName {
+    TypeName::Normal(NormalTypeName {
         name: ident("List"),
         subtype: Some(Box::new(type_hole_name())),
-    }
+    })
 }
 
 pub fn bool_enum() -> Type {
@@ -47,10 +54,35 @@ pub fn bool_enum() -> Type {
     }
 }
 
+pub fn int_type() -> Type {
+    Type::Simple {
+        name: ident("Int"),
+        subtype: None,
+    }
+}
+
+pub fn float_type() -> Type {
+    Type::Simple {
+        name: ident("Float"),
+        subtype: None,
+    }
+}
+
+pub fn string_type() -> Type {
+    Type::Simple {
+        name: ident("String"),
+        subtype: None,
+    }
+}
+
 pub fn default_type_definitions() -> TypeMap {
     [
         (ident("Option"), generic_option_type()),
+        (ident("List"), generic_list_type()),
         (ident("Bool"), bool_enum()),
+        (ident("Int"), int_type()),
+        (ident("Float"), float_type()),
+        (ident("String"), string_type()),
     ]
     .into()
 }
@@ -162,7 +194,7 @@ impl Type {
 
     pub fn fill_type_hole(self, typ: Type) -> Self {
         match self {
-            Type::Hole => Type::Hole,
+            Type::Hole => typ,
             Type::Simple {
                 ref name,
                 ref subtype,
@@ -219,12 +251,24 @@ impl std::fmt::Display for Type {
 }
 
 #[derive(Clone, Debug)]
-pub struct TypeName {
+pub struct NormalTypeName {
     pub name: Ident,
-    pub subtype: Option<Box<TypeName>>,
+    pub subtype: Option<Box<NormalTypeName>>,
 }
 
-impl TypeName {
+#[derive(Clone, Debug)]
+pub struct FunctionTypeName {
+    pub args: Vec<NormalTypeName>,
+    pub return_type: NormalTypeName,
+}
+
+#[derive(Clone, Debug)]
+pub enum TypeName {
+    Normal(NormalTypeName),
+    Function(FunctionTypeName),
+}
+
+impl NormalTypeName {
     pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
         if let Some(typ) = type_definitions.get(&self.name) {
             if let Some(subtype) = &self.subtype {
@@ -240,6 +284,30 @@ impl TypeName {
             }
         } else {
             Err(format!("Unknown type: {}", self.name.0))
+        }
+    }
+}
+
+impl FunctionTypeName {
+    pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
+        let arg_types = self
+            .args
+            .iter()
+            .map(|t| t.to_type(type_definitions))
+            .collect::<Result<Vec<_>, _>>()?;
+        let return_type_type = self.return_type.to_type(type_definitions)?;
+        Ok(Type::Function {
+            args: arg_types,
+            return_type: Box::new(return_type_type),
+        })
+    }
+}
+
+impl TypeName {
+    pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
+        match self {
+            TypeName::Normal(n) => n.to_type(type_definitions),
+            TypeName::Function(f) => f.to_type(type_definitions),
         }
     }
 }
@@ -276,7 +344,7 @@ pub fn check(
             match &types[..] {
                 [] => Ok(Type::Simple {
                     name: ident("List"),
-                    subtype: Some(Box::new(Type::simple("T"))),
+                    subtype: Some(Box::new(Type::Hole)),
                 }),
                 [subtype] => Ok(Type::Simple {
                     name: ident("List"),
@@ -314,18 +382,14 @@ pub fn check(
         }
         Expr::Function(f) => {
             let mut new_scope = TypeMap::new();
-            for arg in f.arguments.clone() {
-                new_scope.insert(arg.name, arg.typ);
+            for arg in &f.arguments {
+                let arg_type = arg.typ.to_type(type_definitions)?;
+                new_scope.insert(arg.name.clone(), arg_type);
             }
             let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)?;
-            if evaled_type == f.return_type {
-                Ok(f.return_type.clone())
-            } else {
-                Err(format!(
-                    "Function has incorrect return type, expected {}, got {}",
-                    f.return_type, evaled_type
-                ))
-            }
+            let return_type_type = f.return_type.to_type(type_definitions)?;
+            let matched = return_type_type.matches(&evaled_type)?;
+            Ok(matched)
         }
         Expr::BuiltInFunction(_) => unreachable!("This shouldn't have been checked"),
         Expr::FunctionCall(fc) => {
