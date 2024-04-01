@@ -3,7 +3,7 @@
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
-    typ_check::{generic_list_type, generic_option_type, TypeDef},
+    typ_check::{generic_list_type, generic_option_type, Type},
     utils::{expr_option_to_enum, ident},
 };
 
@@ -23,9 +23,9 @@ fn double() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: TypeDef::simple("Int"),
+            typ: Type::simple("Int"),
         }],
-        return_type: TypeDef::simple("Int"),
+        return_type: Type::simple("Int"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -46,9 +46,9 @@ fn int_to_str() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: TypeDef::simple("Int"),
+            typ: Type::simple("Int"),
         }],
-        return_type: TypeDef::simple("String"),
+        return_type: Type::simple("String"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -82,14 +82,14 @@ fn list_map() -> Expr {
             },
             ArgDef {
                 name: ident("function"),
-                typ: TypeDef::Function {
-                    args: vec![TypeDef::simple("T")],
+                typ: Type::Function {
+                    args: vec![Type::simple("T")],
                     // TODO: fix those types
-                    return_type: Box::new(TypeDef::simple("T")),
+                    return_type: Box::new(Type::simple("T")),
                 },
             },
         ],
-        return_type: TypeDef::simple("T"),
+        return_type: Type::simple("T"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -117,7 +117,7 @@ fn list_get() -> Expr {
             },
             ArgDef {
                 name: ident("idx"),
-                typ: TypeDef::simple("Int"),
+                typ: Type::simple("Int"),
             },
         ],
         return_type: generic_option_type(),
@@ -142,7 +142,7 @@ fn list_size() -> Expr {
             name: ident("list"),
             typ: generic_list_type(),
         }],
-        return_type: TypeDef::simple("Int"),
+        return_type: Type::simple("Int"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -162,9 +162,9 @@ fn sin() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("x"),
-            typ: TypeDef::simple("Float"),
+            typ: Type::simple("Float"),
         }],
-        return_type: TypeDef::simple("Float"),
+        return_type: Type::simple("Float"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -184,9 +184,9 @@ fn cos() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("x"),
-            typ: TypeDef::simple("Float"),
+            typ: Type::simple("Float"),
         }],
-        return_type: TypeDef::simple("Float"),
+        return_type: Type::simple("Float"),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }

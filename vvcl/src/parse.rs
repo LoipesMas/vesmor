@@ -18,7 +18,7 @@ use crate::{
         ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
         EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
     },
-    typ_check::TypeDef,
+    typ_check::Type,
 };
 
 type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
@@ -43,17 +43,17 @@ fn ident(input: Span) -> PResult<Ident> {
     )(input)
 }
 
-fn simple_typ(input: Span) -> PResult<TypeDef> {
+fn simple_typ(input: Span) -> PResult<Type> {
     map(
         pair(ident, opt(delimited(tag("<"), typ, tag(">")))),
-        |(name, subtype)| TypeDef::Simple {
+        |(name, subtype)| Type::Simple {
             name,
             subtype: subtype.map(Box::new),
         },
     )(input)
 }
 
-fn typ(input: Span) -> PResult<TypeDef> {
+fn typ(input: Span) -> PResult<Type> {
     alt((simple_typ,))(input)
 }
 

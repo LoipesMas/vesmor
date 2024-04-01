@@ -11,6 +11,8 @@ mod typ_check;
 use ast::Definition;
 use utils::{default_global_scope, wrap_in_span};
 
+use crate::typ_check::default_type_definitions;
+
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
 
@@ -39,6 +41,7 @@ fn main() {
         dbg!(typ_check::check(
             &HashMap::new(),
             &HashMap::new(),
+            &default_type_definitions(),
             &def.body
         ))
         .unwrap();
