@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{BinaryOperation, BinaryOperator, Expr, Ident},
+    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident},
     utils::ident,
 };
 
@@ -507,7 +507,51 @@ pub fn check(
                 Err(format!("Unknown type: {:?}", &ev.enu.0))
             }
         }
-        Expr::EnumMatching(_) => todo!(),
+        Expr::EnumMatching(em) => {
+            let value_type = c(&em.value)?;
+            if let Type::Enum { enu, variants } = value_type {
+                let mut branch_types = vec![];
+                for branch in &em.branches {
+                    // First, check if patterns are correct
+                    match &branch.pattern {
+                        EnumPattern::Variant { variant, bind } => {
+                            if let Some(variant_body) = variants.get(variant) {
+                                match (bind, variant_body) {
+                                    (None, None) => {}
+                                    (None, Some(t)) => {
+                                        return Err(format!(
+                                            "'{}::{}`' has a body of type {}, which wasn't bound.",
+                                            enu.0, variant.0, t
+                                        ))
+                                    }
+                                    (Some(_), None) => {
+                                        return Err(format!(
+                                        "'{}::{}`' doesn't have a body, but binding was attempted.",
+                                        enu.0, variant.0
+                                    ))
+                                    }
+                                    (Some(_), Some(_)) => {}
+                                }
+                            } else {
+                                return Err(format!(
+                                    "Enum '{}' doesn't have variant {}",
+                                    enu.0, variant.0
+                                ));
+                            }
+                        }
+                        EnumPattern::Any { bind: _ } => {}
+                    }
+                    // Second, get type of branch and add to list
+                    branch_types.push(c(&branch.expr)?);
+                }
+                let result_type = branch_types
+                    .iter()
+                    .try_fold(branch_types[0].clone(), |a, x| a.matches(x));
+                result_type.map_err(|e| format!("Branch type mismatch: {e}"))
+            } else {
+                Err(format!("Enum matching requires an enum, got {value_type}"))
+            }
+        }
     }
 }
 

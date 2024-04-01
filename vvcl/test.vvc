@@ -1,3 +1,6 @@
 main = (a: Bool, b: Int) -> List<Int> {
-    [b, 2, 4]
+    ? Option::Some` 5
+    | Some` x => [x];
+    | None` => [b];
+    | y => [];
 };
