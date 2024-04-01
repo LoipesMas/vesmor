@@ -1,6 +1,6 @@
-main = (a: Bool, b: Int) -> List<Int> {
+main = (a: Bool, b: Int) -> Option<Int> {
     ? Option::Some` 5
-    | Some` x => [x];
-    | None` => [b];
-    | y => [];
+    | Some` x => Option::Some` x;
+    | None` => Option::Some` b;
+    | y => y;
 };

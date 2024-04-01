@@ -509,40 +509,52 @@ pub fn check(
         }
         Expr::EnumMatching(em) => {
             let value_type = c(&em.value)?;
-            if let Type::Enum { enu, variants } = value_type {
+            if let Type::Enum {
+                ref enu,
+                ref variants,
+            } = value_type
+            {
                 let mut branch_types = vec![];
                 for branch in &em.branches {
-                    // First, check if patterns are correct
-                    match &branch.pattern {
+                    // TODO: this is ugly, refactor plz
+                    let branch_type = match &branch.pattern {
                         EnumPattern::Variant { variant, bind } => {
                             if let Some(variant_body) = variants.get(variant) {
                                 match (bind, variant_body) {
-                                    (None, None) => {}
-                                    (None, Some(t)) => {
-                                        return Err(format!(
-                                            "'{}::{}`' has a body of type {}, which wasn't bound.",
-                                            enu.0, variant.0, t
-                                        ))
-                                    }
-                                    (Some(_), None) => {
-                                        return Err(format!(
+                                    (None, None) => c(&branch.expr),
+                                    (None, Some(t)) => Err(format!(
+                                        "'{}::{}`' has a body of type {}, which wasn't bound.",
+                                        enu.0, variant.0, t
+                                    )),
+                                    (Some(_), None) => Err(format!(
                                         "'{}::{}`' doesn't have a body, but binding was attempted.",
                                         enu.0, variant.0
-                                    ))
+                                    )),
+                                    (Some(bind), Some(variant_body_typ)) => {
+                                        let mut new_scope = local_scope.clone();
+                                        new_scope.insert(bind.clone(), variant_body_typ.clone());
+                                        check(
+                                            global_scope,
+                                            &new_scope,
+                                            type_definitions,
+                                            &branch.expr,
+                                        )
                                     }
-                                    (Some(_), Some(_)) => {}
                                 }
                             } else {
-                                return Err(format!(
+                                Err(format!(
                                     "Enum '{}' doesn't have variant {}",
                                     enu.0, variant.0
-                                ));
+                                ))
                             }
                         }
-                        EnumPattern::Any { bind: _ } => {}
-                    }
-                    // Second, get type of branch and add to list
-                    branch_types.push(c(&branch.expr)?);
+                        EnumPattern::Any { bind } => {
+                            let mut new_scope = local_scope.clone();
+                            new_scope.insert(bind.clone(), value_type.clone());
+                            check(global_scope, &new_scope, type_definitions, &branch.expr)
+                        }
+                    }?;
+                    branch_types.push(branch_type);
                 }
                 let result_type = branch_types
                     .iter()
