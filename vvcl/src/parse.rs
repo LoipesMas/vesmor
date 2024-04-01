@@ -12,14 +12,11 @@ use nom::{
 use nom_locate::LocatedSpan;
 use nom_recursive::{recursive_parser, RecursiveInfo};
 
-use crate::utils::map_from_defs;
-use crate::{
-    ast::{
-        ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
-        EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
-    },
-    typ_check::Type,
+use crate::ast::{
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
+    EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
 };
+use crate::{typ_check::TypeName, utils::map_from_defs};
 
 type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
 
@@ -43,22 +40,18 @@ fn ident(input: Span) -> PResult<Ident> {
     )(input)
 }
 
-fn simple_typ(input: Span) -> PResult<Type> {
+fn type_name(input: Span) -> PResult<TypeName> {
     map(
-        pair(ident, opt(delimited(tag("<"), typ, tag(">")))),
-        |(name, subtype)| Type::Simple {
+        pair(ident, opt(delimited(tag("<"), type_name, tag(">")))),
+        |(name, subtype)| TypeName {
             name,
             subtype: subtype.map(Box::new),
         },
     )(input)
 }
 
-fn typ(input: Span) -> PResult<Type> {
-    alt((simple_typ,))(input)
-}
-
 fn arg_def(input: Span) -> PResult<ArgDef> {
-    let (input, (name, typ)) = separated_pair(ident, tag(":"), typ)(input)?;
+    let (input, (name, typ)) = separated_pair(ident, tag(":"), type_name)(input)?;
     Ok((input, ArgDef { name, typ }))
 }
 
@@ -264,20 +257,13 @@ fn enum_matching_expr(input: Span) -> PResult<Expr> {
     )(input)
 }
 
-fn type_name(input: Span) -> PResult<String> {
-    map(
-        recognize(pair(ident, opt(delimited(tag("<"), type_name, tag(">"))))),
-        |s: Span| s.to_string(),
-    )(input)
-}
-
 fn fun(input: Span) -> PResult<Function> {
     map(
         pair(
             separated_pair(
                 delimited(tag("("), separated_list0(tag(","), arg_def), tag(")")),
                 tag("->"),
-                typ,
+                type_name,
             ),
             map(expr, Box::new),
         ),

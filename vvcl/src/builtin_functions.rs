@@ -3,9 +3,33 @@
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
     eval::ScopeMap,
-    typ_check::{generic_list_type, generic_option_type, Type},
+    typ_check::{
+        generic_list_type, generic_list_type_name, generic_option_type, type_hole_name, Type,
+        TypeName,
+    },
     utils::{expr_option_to_enum, ident},
 };
+
+fn int_type() -> TypeName {
+    TypeName {
+        name: ident("Int"),
+        subtype: None,
+    }
+}
+
+fn float_type() -> TypeName {
+    TypeName {
+        name: ident("Float"),
+        subtype: None,
+    }
+}
+
+fn string_type() -> TypeName {
+    TypeName {
+        name: ident("String"),
+        subtype: None,
+    }
+}
 
 fn double() -> Expr {
     fn body(local_scope: &ScopeMap) -> Expr {
@@ -23,9 +47,9 @@ fn double() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: Type::simple("Int"),
+            typ: int_type(),
         }],
-        return_type: Type::simple("Int"),
+        return_type: int_type(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -46,9 +70,9 @@ fn int_to_str() -> Expr {
     Expr::Function(Function {
         arguments: vec![ArgDef {
             name: ident("a"),
-            typ: Type::simple("Int"),
+            typ: int_type(),
         }],
-        return_type: Type::simple("String"),
+        return_type: string_type(),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
@@ -78,12 +102,12 @@ fn list_map() -> Expr {
         arguments: vec![
             ArgDef {
                 name: ident("list"),
-                typ: generic_list_type(),
+                typ: generic_list_type_name(),
             },
             ArgDef {
                 name: ident("function"),
                 typ: Type::Function {
-                    args: vec![Type::simple("T")],
+                    args: vec![type_hole_name()],
                     // TODO: fix those types
                     return_type: Box::new(Type::simple("T")),
                 },

@@ -26,6 +26,20 @@ pub fn generic_list_type() -> Type {
     }
 }
 
+pub fn type_hole_name() -> TypeName {
+    TypeName {
+        name: ident("_"),
+        subtype: None,
+    }
+}
+
+pub fn generic_list_type_name() -> TypeName {
+    TypeName {
+        name: ident("List"),
+        subtype: Some(Box::new(type_hole_name())),
+    }
+}
+
 pub fn bool_enum() -> Type {
     Type::Enum {
         enu: ident("Bool"),
@@ -145,6 +159,37 @@ impl Type {
             _ => Err(format!("Types don't match: {self} and {other}")),
         }
     }
+
+    pub fn fill_type_hole(self, typ: Type) -> Self {
+        match self {
+            Type::Hole => Type::Hole,
+            Type::Simple {
+                ref name,
+                ref subtype,
+            } => match subtype.as_deref() {
+                Some(Type::Hole) => Type::Simple {
+                    name: name.clone(),
+                    subtype: Some(Box::new(typ)),
+                },
+                Some(_) => todo!(),
+                None => self,
+            },
+            Type::Record(_) => todo!(),
+            Type::Enum { enu, variants } => {
+                let mut new_variants = variants.clone();
+                for (k, variant) in variants {
+                    if let Some(v) = variant {
+                        new_variants.insert(k, Some(v.fill_type_hole(typ.clone())));
+                    }
+                }
+                Type::Enum {
+                    enu,
+                    variants: new_variants,
+                }
+            }
+            Type::Function { args, return_type } => todo!(),
+        }
+    }
 }
 
 impl std::fmt::Display for Type {
@@ -173,6 +218,32 @@ impl std::fmt::Display for Type {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TypeName {
+    pub name: Ident,
+    pub subtype: Option<Box<TypeName>>,
+}
+
+impl TypeName {
+    pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
+        if let Some(typ) = type_definitions.get(&self.name) {
+            if let Some(subtype) = &self.subtype {
+                if subtype.name.0 == "_" {
+                    Ok(typ.clone())
+                } else {
+                    let subtype = subtype.to_type(type_definitions)?;
+                    let new_typ = typ.clone().fill_type_hole(subtype);
+                    Ok(new_typ)
+                }
+            } else {
+                Ok(typ.clone())
+            }
+        } else {
+            Err(format!("Unknown type: {}", self.name.0))
+        }
+    }
+}
+
 type TypeMap = HashMap<Ident, Type>;
 
 trait Scope {
@@ -186,8 +257,8 @@ impl Scope for TwoScopes<'_> {
     }
 }
 
-// Scopes are for variable -> type (e.g., type of argument)
-// type_definitions is for type_name -> type (e.g. "Option" -> Enum { name: Option, variants:...})
+// Scopes are for `variable -> type` (e.g., "x" -> Int)
+// type_definitions is for `type_name -> type` (e.g. "Option" -> Enum { name: Option, variants:...})
 pub fn check(
     global_scope: &TypeMap,
     local_scope: &TypeMap,
