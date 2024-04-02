@@ -260,15 +260,15 @@ impl std::fmt::Display for Type {
         match self {
             Self::Simple { name, subtype } => {
                 if let Some(ref subtype) = subtype {
-                    write!(f, "{}<{}>", name.0, subtype)
+                    write!(f, "{name}<{subtype}>")
                 } else {
-                    write!(f, "{}", name.0)
+                    write!(f, "{name}")
                 }
             }
             Self::Record(map) => {
                 write!(f, "{{")?;
                 for (k, v) in map.iter() {
-                    write!(f, "{}: {v}, ", k.0)?;
+                    write!(f, "{k}: {v}, ")?;
                 }
                 write!(f, "}}")?;
                 Ok(())
@@ -320,7 +320,7 @@ impl NormalTypeName {
                 Ok(typ.clone())
             }
         } else {
-            Err(format!("Unknown type: {}", self.name.0))
+            Err(format!("Unknown type: {}", self.name))
         }
     }
 }
@@ -425,7 +425,7 @@ pub fn check(
         Expr::Value(v) => combined_scope
             .get(v)
             .cloned()
-            .ok_or_else(|| format!("Type for value '{}' not found!", v.0)),
+            .ok_or_else(|| format!("Type for value '{v}' not found!")),
         Expr::BinaryOperation(bin_opt) => {
             check_bin_opt(global_scope, local_scope, type_definitions, bin_opt)
         }
@@ -494,8 +494,7 @@ pub fn check(
                         if let Some(new_type) = new_types.insert(k.clone(), v.clone()) {
                             if &new_type != v {
                                 return Err(format!(
-                                    "Incorrect new type for member '{}', expected {v}, got {new_type}",
-                                    k.0
+                                    "Incorrect new type for member '{k}', expected {v}, got {new_type}"
                                 ));
                             }
                         }
@@ -518,13 +517,13 @@ pub fn check(
                 } else {
                     Err(format!(
                         "Type {rec_type} doesn't have member '{}'",
-                        &ra.member.0
+                        &ra.member
                     ))
                 }
             } else {
                 Err(format!(
                     "Tried to access member {} of non-record type {rec_type}",
-                    &ra.member.0
+                    &ra.member
                 ))
             }
         }
@@ -536,12 +535,12 @@ pub fn check(
                             (None, None) => Ok(enum_def.clone()),
                             (None, Some(t)) => Err(format!(
                                 "Enum variant {}::{} requires a body of type {}",
-                                &ev.enu.0, &ev.variant.0, t
+                                &ev.enu, &ev.variant, t
                             )),
                             (Some(a), None) => Err(format!(
                                 "Enum variant {}::{} can't have a body, but got type {}",
-                                &ev.enu.0,
-                                &ev.variant.0,
+                                &ev.enu,
+                                &ev.variant,
                                 c(a)?
                             )),
                             (Some(a), Some(b)) => {
@@ -558,14 +557,14 @@ pub fn check(
                     } else {
                         Err(format!(
                             "Enum {} doesn't have variant {}",
-                            &ev.enu.0, &ev.variant.0
+                            &ev.enu, &ev.variant
                         ))
                     }
                 } else {
-                    Err(format!("Expected enum type, got {:?}", &ev.enu.0))
+                    Err(format!("Expected enum type, got {:?}", &ev.enu))
                 }
             } else {
-                Err(format!("Unknown type: {:?}", &ev.enu.0))
+                Err(format!("Unknown type: {:?}", &ev.enu))
             }
         }
         Expr::EnumMatching(em) => {
@@ -584,20 +583,15 @@ pub fn check(
                         EnumPattern::Variant { variant, bind } => {
                             if let Some(variant_body) = variants.get(variant) {
                                 if !not_covered_variants.remove(&variant.0) {
-                                    return Err(format!(
-                                        "'{}::{}' was already covered!",
-                                        enu.0, variant.0
-                                    ));
+                                    return Err(format!("'{enu}::{variant}' was already covered!"));
                                 }
                                 match (bind, variant_body) {
                                     (None, None) => c(&branch.expr),
                                     (None, Some(t)) => Err(format!(
-                                        "'{}::{}`' has a body of type {}, which wasn't bound.",
-                                        enu.0, variant.0, t
+                                        "'{enu}::{variant}`' has a body of type {t}, which wasn't bound.",
                                     )),
                                     (Some(_), None) => Err(format!(
-                                        "'{}::{}`' doesn't have a body, but binding was attempted.",
-                                        enu.0, variant.0
+                                        "'{enu}::{variant}`' doesn't have a body, but binding was attempted.",
                                     )),
                                     (Some(bind), Some(variant_body_typ)) => {
                                         let mut new_scope = local_scope.clone();
@@ -611,10 +605,7 @@ pub fn check(
                                     }
                                 }
                             } else {
-                                Err(format!(
-                                    "Enum '{}' doesn't have variant {}",
-                                    enu.0, variant.0
-                                ))
+                                Err(format!("Enum '{enu}' doesn't have variant {variant}",))
                             }
                         }
                         EnumPattern::Any { bind } => {
@@ -628,8 +619,7 @@ pub fn check(
                 }
                 if !not_covered_variants.is_empty() {
                     Err(format!(
-                        "Following variants of enum '{}' were not covered: {}",
-                        enu.0,
+                        "Following variants of enum '{enu}' were not covered: {}",
                         not_covered_variants
                             .iter()
                             .fold(String::new(), |a, x| a + x + ", ")

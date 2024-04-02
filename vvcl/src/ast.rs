@@ -10,6 +10,12 @@ use crate::typ_check::TypeName;
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Ident(pub String);
 
+impl std::fmt::Display for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Definition {
     pub name: Ident,
