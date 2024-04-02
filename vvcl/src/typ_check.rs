@@ -222,6 +222,22 @@ impl Type {
             Type::Function { args, return_type } => todo!(),
         }
     }
+
+    pub fn has_holes(&self) -> bool {
+        match self {
+            Type::Hole => true,
+            Type::Simple { name: _, subtype } => {
+                subtype.as_deref().map(Type::has_holes).unwrap_or(false)
+            }
+            Type::Record(r) => r.values().any(Type::has_holes),
+            Type::Enum { enu: _, variants } => variants
+                .values()
+                .any(|v| v.as_ref().map(Type::has_holes).unwrap_or(false)),
+            Type::Function { args, return_type } => {
+                args.iter().any(Type::has_holes) || return_type.has_holes()
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for Type {
@@ -388,8 +404,14 @@ pub fn check(
             }
             let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)?;
             let return_type_type = f.return_type.to_type(type_definitions)?;
-            let matched = return_type_type.matches(&evaled_type)?;
-            Ok(matched)
+            if return_type_type.has_holes() {
+                Err(format!(
+                    "Returning types with holes not supported (yet). ({return_type_type})"
+                ))
+            } else {
+                let matched = return_type_type.matches(&evaled_type)?;
+                Ok(matched)
+            }
         }
         Expr::BuiltInFunction(_) => unreachable!("This shouldn't have been checked"),
         Expr::FunctionCall(fc) => {
