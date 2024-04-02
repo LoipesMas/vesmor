@@ -614,9 +614,19 @@ fn check_bin_opt(
                 ))
             }
         }
-        FloatAdd | FloatSub | FloatMul | FloatDiv | FloatLT | FloatGT => {
+        FloatAdd | FloatSub | FloatMul | FloatDiv => {
             if left == right && left == Type::simple("Float") {
                 Ok(Type::simple("Float"))
+            } else {
+                Err(format!(
+                    "Invalid use of operator: {} {:?} {}",
+                    left, bin_opt.operator, right
+                ))
+            }
+        }
+        FloatLT | FloatGT => {
+            if left == right && left == Type::simple("Float") {
+                Ok(bool_enum())
             } else {
                 Err(format!(
                     "Invalid use of operator: {} {:?} {}",
