@@ -400,6 +400,11 @@ pub fn check(
             let mut new_scope = TypeMap::new();
             for arg in &f.arguments {
                 let arg_type = arg.typ.to_type(type_definitions)?;
+                if arg_type.has_holes() {
+                    return Err(format!(
+                        "Argument types with holes not supported (yet). ({arg_type})"
+                    ));
+                }
                 new_scope.insert(arg.name.clone(), arg_type);
             }
             let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)?;
