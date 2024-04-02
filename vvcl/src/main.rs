@@ -8,10 +8,9 @@ mod utils;
 use utils::ident;
 mod typ_check;
 
+use crate::{parse::TopLevelDefinition, typ_check::default_type_definitions};
 use ast::Definition;
 use utils::{default_global_scope, wrap_in_span};
-
-use crate::typ_check::default_type_definitions;
 
 #[allow(non_upper_case_globals)]
 const int_e: fn(i64) -> ast::Expr = ast::Expr::Int;
@@ -37,11 +36,24 @@ fn main() {
         return;
     }
 
-    for def in &defs {
+    let mut type_definitions = default_type_definitions();
+
+    let mut exprs = vec![];
+
+    for def in defs.into_iter() {
+        match def {
+            TopLevelDefinition::Type(t) => {
+                type_definitions.insert(t.name, t.body.to_type(&type_definitions).unwrap());
+            }
+            TopLevelDefinition::Expr(e) => exprs.push(e),
+        }
+    }
+
+    for def in &exprs {
         dbg!(typ_check::check(
             &HashMap::new(),
             &HashMap::new(),
-            &default_type_definitions(),
+            &type_definitions,
             &def.body
         ))
         .unwrap();
@@ -50,7 +62,7 @@ fn main() {
 
     // 1st pass of "compilation"
     // without global scope
-    let reduced_defs: Vec<Definition> = defs
+    let reduced_defs: Vec<Definition> = exprs
         .iter()
         .map(|d| Definition {
             body: eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),

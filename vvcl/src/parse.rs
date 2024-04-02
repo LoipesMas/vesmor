@@ -5,7 +5,7 @@ use nom::{
     bytes::complete::{tag, take_until, take_while},
     character::{complete::alphanumeric1, is_alphabetic},
     combinator::{map, map_res, opt, recognize},
-    multi::{many0, many0_count, many1, separated_list0},
+    multi::{many0, many0_count, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     IResult,
 };
@@ -16,8 +16,9 @@ use crate::{
     ast::{
         ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
         EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+        TypeDef,
     },
-    typ_check::{FunctionTypeName, TypeName},
+    typ_check::{FunctionTypeName, RecordTypeName, TypeName},
 };
 use crate::{typ_check::NormalTypeName, utils::map_from_defs};
 
@@ -119,6 +120,7 @@ fn int_expr(input: Span) -> PResult<Expr> {
 }
 
 fn float_expr(input: Span) -> PResult<Expr> {
+    // TODO: use nom's double
     map(
         map_res(
             recognize(pair(
@@ -329,6 +331,44 @@ pub fn expr(input: Span) -> PResult<Expr> {
     ))(input)
 }
 
-pub fn top_definitions(input: Span) -> PResult<Vec<Definition>> {
-    many0(definition)(input)
+fn record_definition(input: Span) -> PResult<RecordTypeName> {
+    map(
+        preceded(
+            tag("$"),
+            delimited(
+                tag("<"),
+                terminated(separated_list1(tag(","), arg_def), opt(tag(","))),
+                tag(">"),
+            ),
+        ),
+        |members| RecordTypeName {
+            members: members.into_iter().map(|a| (a.name, a.typ)).collect(),
+        },
+    )(input)
+}
+
+fn type_definition_body(input: Span) -> PResult<TypeName> {
+    alt((map(record_definition, TypeName::Record),))(input)
+}
+
+fn type_definition(input: Span) -> PResult<TypeDef> {
+    map(
+        terminated(
+            separated_pair(ident, tag("="), type_definition_body),
+            tag(";"),
+        ),
+        |(name, body)| TypeDef { name, body },
+    )(input)
+}
+
+pub enum TopLevelDefinition {
+    Type(TypeDef),
+    Expr(Definition),
+}
+
+pub fn top_definitions(input: Span) -> PResult<Vec<TopLevelDefinition>> {
+    many0(alt((
+        map(definition, TopLevelDefinition::Expr),
+        map(type_definition, TopLevelDefinition::Type),
+    )))(input)
 }

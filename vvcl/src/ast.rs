@@ -230,3 +230,9 @@ impl Expr {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct TypeDef {
+    pub name: Ident,
+    pub body: TypeName,
+}

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident},
+    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident, Record},
     utils::ident,
 };
 
@@ -188,6 +188,21 @@ impl Type {
                     }
                 }
             }
+            (Type::Record(a), Type::Record(b)) => {
+                let a_keys = a.keys().collect::<HashSet<_>>();
+                let b_keys = b.keys().collect::<HashSet<_>>();
+                if a_keys != b_keys {
+                    Err(format!("Types don't match: {self} and {other}"))
+                } else {
+                    let mut new_members = HashMap::new();
+                    for key in a_keys {
+                        let member_a = a.get(key).expect("Iterating using known keys.");
+                        let member_b = b.get(key).expect("Iterating using known keys.");
+                        new_members.insert(key.clone(), member_a.matches(member_b)?);
+                    }
+                    Ok(Type::Record(new_members))
+                }
+            }
             _ => Err(format!("Types don't match: {self} and {other}")),
         }
     }
@@ -253,7 +268,7 @@ impl std::fmt::Display for Type {
             Self::Record(map) => {
                 write!(f, "{{")?;
                 for (k, v) in map.iter() {
-                    write!(f, "{}: {v},", k.0)?;
+                    write!(f, "{}: {v}, ", k.0)?;
                 }
                 write!(f, "}}")?;
                 Ok(())
@@ -279,9 +294,15 @@ pub struct FunctionTypeName {
 }
 
 #[derive(Clone, Debug)]
+pub struct RecordTypeName {
+    pub members: HashMap<Ident, TypeName>,
+}
+
+#[derive(Clone, Debug)]
 pub enum TypeName {
     Normal(NormalTypeName),
     Function(FunctionTypeName),
+    Record(RecordTypeName),
 }
 
 impl NormalTypeName {
@@ -319,11 +340,23 @@ impl FunctionTypeName {
     }
 }
 
+impl RecordTypeName {
+    pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
+        let member_types = self
+            .members
+            .iter()
+            .map(|(k, t)| t.to_type(type_definitions).map(|t| (k.clone(), t)))
+            .collect::<Result<HashMap<_, _>, _>>()?;
+        Ok(Type::Record(member_types))
+    }
+}
+
 impl TypeName {
     pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
         match self {
             TypeName::Normal(n) => n.to_type(type_definitions),
             TypeName::Function(f) => f.to_type(type_definitions),
+            TypeName::Record(r) => r.to_type(type_definitions),
         }
     }
 }
@@ -461,7 +494,8 @@ pub fn check(
                         if let Some(new_type) = new_types.insert(k.clone(), v.clone()) {
                             if &new_type != v {
                                 return Err(format!(
-                                    "Incorrect new type for {k:?}, expected {v}, got {new_type}"
+                                    "Incorrect new type for member '{}', expected {v}, got {new_type}",
+                                    k.0
                                 ));
                             }
                         }

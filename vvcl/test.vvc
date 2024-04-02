@@ -1,6 +1,13 @@
-main = (a: Bool, b: Int) -> Option<Int> {
-    ? Option::Some` 5
-    | Some` x => Option::Some` x;
-    | None` => Option::Some` b;
-    | y => y;
+User = $<
+    name: String,
+    password: String,
+    >;
+
+Admin = $<
+    user: User,
+    level: Int,
+    >;
+
+main = (a: Bool, b: User) -> Admin {
+    < user = b; level = 5;>
 };
