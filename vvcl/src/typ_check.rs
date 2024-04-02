@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident},
@@ -542,11 +542,19 @@ pub fn check(
             } = value_type
             {
                 let mut branch_types = vec![];
+                let mut not_covered_variants: HashSet<String> =
+                    variants.keys().map(|v| v.0.to_owned()).collect();
                 for branch in &em.branches {
                     // TODO: this is ugly, refactor plz
                     let branch_type = match &branch.pattern {
                         EnumPattern::Variant { variant, bind } => {
                             if let Some(variant_body) = variants.get(variant) {
+                                if !not_covered_variants.remove(&variant.0) {
+                                    return Err(format!(
+                                        "'{}::{}' was already covered!",
+                                        enu.0, variant.0
+                                    ));
+                                }
                                 match (bind, variant_body) {
                                     (None, None) => c(&branch.expr),
                                     (None, Some(t)) => Err(format!(
@@ -578,15 +586,26 @@ pub fn check(
                         EnumPattern::Any { bind } => {
                             let mut new_scope = local_scope.clone();
                             new_scope.insert(bind.clone(), value_type.clone());
+                            not_covered_variants = HashSet::new();
                             check(global_scope, &new_scope, type_definitions, &branch.expr)
                         }
                     }?;
                     branch_types.push(branch_type);
                 }
-                let result_type = branch_types
-                    .iter()
-                    .try_fold(branch_types[0].clone(), |a, x| a.matches(x));
-                result_type.map_err(|e| format!("Branch type mismatch: {e}"))
+                if !not_covered_variants.is_empty() {
+                    Err(format!(
+                        "Following variants of enum '{}' were not covered: {}",
+                        enu.0,
+                        not_covered_variants
+                            .iter()
+                            .fold(String::new(), |a, x| a + x + ", ")
+                    ))
+                } else {
+                    let result_type = branch_types
+                        .iter()
+                        .try_fold(branch_types[0].clone(), |a, x| a.matches(x));
+                    result_type.map_err(|e| format!("Branch type mismatch: {e}"))
+                }
             } else {
                 Err(format!("Enum matching requires an enum, got {value_type}"))
             }
