@@ -8,9 +8,11 @@ Admin: <
     level: Int,
     >;
 
-rec = < level = 5;>;
+user = (name: String, password: String) -> User {
+    <name=name; password=password;>
+};
 
-main = (a: Bool, b: User) -> Admin {
-    new_level = 7;
-    < rec | user = b; level = new_level;>
+main = (a: Bool, b: Int) -> Admin {
+    u = user("a", "b");
+    < user = u; level = b;>
 };

@@ -448,7 +448,10 @@ pub fn check(
                 ))
             } else {
                 let matched = return_type_type.matches(&evaled_type)?;
-                Ok(matched)
+                Ok(Type::Function {
+                    args: new_scope.into_values().collect(),
+                    return_type: Box::new(matched),
+                })
             }
         }
         Expr::BuiltInFunction(_) => unreachable!("This shouldn't have been checked"),
