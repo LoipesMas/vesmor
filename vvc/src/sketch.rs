@@ -23,7 +23,7 @@ pub struct SourceCode {
 
 impl Default for SourceCode {
     fn default() -> Self {
-        let file_path = "static/game.vvc";
+        let file_path = "static/bouncy_box.vvc";
         let code =
             std::fs::read_to_string(file_path).expect("Should have been able to read the file");
         // let code: String = include_str!("../static/game.vvc").to_string();

@@ -45,6 +45,7 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
     ]
 };
 
+Game: <position: Vec2, speed: Vec2>;
 init = <
         position = < x = 0.0; y = 0.0; >;
         speed = < x = 167.0; y = -200.0; >;
@@ -66,7 +67,7 @@ move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
     add_vec2s(position, mul_vec2_scalar(speed, delta))
 };
 
-bounce = (position: Vec2, speed: Vec2) -> Self {
+bounce = (position: Vec2, speed: Vec2) -> Game {
     x_pos = @position.x;
     y_pos = @position.y;
     initial_x_speed = @speed.x;
@@ -104,30 +105,31 @@ apply_gravity = (speed: Vec2, delta: Float) -> Vec2 {
     add_vec2s(speed, mul_vec2_scalar(gravity, delta))
 };
 
-update_handler = (self: Self, delta: Float) -> SelfAndCommands {
-    moved_pos = move(@self.position, @self.speed, delta);
-    bounced = bounce(moved_pos, @self.speed);
+GameAndCommands : < game: Game, commands: List<Command>>;
+update_handler = (game: Game, delta: Float) -> GameAndCommands {
+    moved_pos = move(@game.position, @game.speed, delta);
+    bounced = bounce(moved_pos, @game.speed);
     gravitied_speed = apply_gravity(@bounced.speed, delta);
     commands = (draw_bouncer(@bounced.position) ~~ draw_borders);
     <
-    self = < position = @bounced.position; speed = gravitied_speed; >;
+    game = < position = @bounced.position; speed = gravitied_speed; >;
     commands = commands;
     >
 };
 
-jump = (self: Self) -> Self {
-    < self | speed = <@self.speed | y = max(@@self.speed.y, jump_force);>;>
+jump = (game: Game) -> Game {
+    < game | speed = <@game.speed | y = max(@@game.speed.y, jump_force);>;>
 };
 
-event_handler = (self: Self, event: Event) -> SelfAndCommands {
-    new_self = ? event
+event_handler = (game: Game, event: Event) -> GameAndCommands {
+    new_game = ? event
         | KeyPressed` key => ? key
-            | G` => < self | position = vec2(0.0,0.0);>;
-            | W` => jump(self);
-            | _ => self;
+            | G` => < game | position = vec2(0.0,0.0);>;
+            | W` => jump(game);
+            | _ => game;
             ;
-        | _ => self;
+        | _ => game;
         ;
-    <self = new_self; commands = [];>
+    <game = new_game; commands = [];>
 };
 
