@@ -18,7 +18,7 @@ use crate::{
         EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
         TypeDef,
     },
-    typ_check::{FunctionTypeName, RecordTypeName, TypeName},
+    typ_check::{EnumTypeName, FunctionTypeName, RecordTypeName, TypeName},
 };
 use crate::{typ_check::NormalTypeName, utils::map_from_defs};
 
@@ -344,6 +344,29 @@ fn record_definition(input: Span) -> PResult<RecordTypeName> {
     )(input)
 }
 
+fn enum_variant_definition(input: Span) -> PResult<(Ident, Option<TypeName>)> {
+    preceded(tag("|"), pair(terminated(ident, tag("`")), opt(type_name)))(input)
+}
+
+// enum definition requires it's name
+// that's why we have to parse it together
+// TODO: fix that ^
+fn enum_definition(input: Span) -> PResult<TypeDef> {
+    map(
+        terminated(
+            separated_pair(ident, tag(":"), many1(enum_variant_definition)),
+            tag(";"),
+        ),
+        |(name, variants)| TypeDef {
+            body: TypeName::Enum(EnumTypeName {
+                enu: name.clone(),
+                variants: variants.into_iter().collect(),
+            }),
+            name,
+        },
+    )(input)
+}
+
 fn type_definition_body(input: Span) -> PResult<TypeName> {
     alt((map(record_definition, TypeName::Record),))(input)
 }
@@ -367,5 +390,6 @@ pub fn top_definitions(input: Span) -> PResult<Vec<TopLevelDefinition>> {
     many0(alt((
         map(definition, TopLevelDefinition::Expr),
         map(type_definition, TopLevelDefinition::Type),
+        map(enum_definition, TopLevelDefinition::Type),
     )))(input)
 }

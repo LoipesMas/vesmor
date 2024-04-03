@@ -315,10 +315,17 @@ pub struct RecordTypeName {
 }
 
 #[derive(Clone, Debug)]
+pub struct EnumTypeName {
+    pub enu: Ident,
+    pub variants: HashMap<Ident, Option<TypeName>>,
+}
+
+#[derive(Clone, Debug)]
 pub enum TypeName {
     Normal(NormalTypeName),
     Function(FunctionTypeName),
     Record(RecordTypeName),
+    Enum(EnumTypeName),
 }
 
 impl NormalTypeName {
@@ -367,12 +374,33 @@ impl RecordTypeName {
     }
 }
 
+impl EnumTypeName {
+    pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
+        // bruh what is this
+        let variants = self
+            .variants
+            .iter()
+            .map(|(k, v)| {
+                v.as_ref().map_or_else(
+                    || Ok((k.clone(), None)),
+                    |v| v.to_type(type_definitions).map(|x| (k.clone(), Some(x))),
+                )
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(Type::Enum {
+            enu: self.enu.clone(),
+            variants,
+        })
+    }
+}
+
 impl TypeName {
     pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
         match self {
             TypeName::Normal(n) => n.to_type(type_definitions),
             TypeName::Function(f) => f.to_type(type_definitions),
             TypeName::Record(r) => r.to_type(type_definitions),
+            TypeName::Enum(e) => e.to_type(type_definitions),
         }
     }
 }

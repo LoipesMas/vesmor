@@ -8,11 +8,12 @@ Admin: <
     level: Int,
     >;
 
+SomeEnum: | Lol` Int | Xd`;
+
 user = (name: String, password: String) -> User {
     <name=name; password=password;>
 };
 
-main = (a: Bool, b: Int) -> Admin {
-    u = user("a", "b");
-    < user = u; level = b;>
+main = (a: Bool, b: Int) -> SomeEnum {
+    SomeEnum::Lol` 5
 };
