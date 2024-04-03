@@ -23,10 +23,12 @@ pub struct SourceCode {
 
 impl Default for SourceCode {
     fn default() -> Self {
-        let file_path = "static/bouncy_box.vvc";
-        let code =
-            std::fs::read_to_string(file_path).expect("Should have been able to read the file");
-        // let code: String = include_str!("../static/game.vvc").to_string();
+        let code = if cfg!(target_family = "wasm") {
+            include_str!("../static/game.vvc").to_string()
+        } else {
+            let file_path = "static/game.vvc";
+            std::fs::read_to_string(file_path).expect("Should have been able to read the file")
+        };
         Self {
             code,
             acknowledged: false,
@@ -45,6 +47,80 @@ enum Command {
 
 fn web_print(s: &str) {
     web_sys::console::log_1(&web_sys::js_sys::JsString::from_str(s).unwrap())
+}
+
+pub fn check_source_code(code: &str) -> Result<(), String> {
+    let contents = code.replace(['\n', ' '], "");
+    let contents = vvcl::utils::wrap_in_span(&contents);
+    let (input, defs) = vvcl::parse::top_definitions(contents).map_err(|e| e.to_string())?;
+
+    if !input.is_empty() {
+        return Err(format!("parsing failed! input left:\n{input}"));
+    };
+    let mut type_definitions = vvcl::typ_check::default_type_definitions();
+    extend_type_definitions(&mut type_definitions);
+
+    let mut exprs = vec![];
+
+    for def in defs.into_iter() {
+        match def {
+            vvcl::parse::TopLevelDefinition::Type(t) => {
+                let body_type = t
+                    .body
+                    .to_type(&type_definitions)
+                    .map_err(|e| format!("In type {}: {}", t.name, e))?;
+                type_definitions.insert(t.name, body_type);
+            }
+            vvcl::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
+        }
+    }
+    let mut global_scope_types =
+        vvcl::builtin_functions::builtin_function_type_definitions(&type_definitions);
+
+    for def in &exprs {
+        let typ = vvcl::typ_check::check(
+            &global_scope_types,
+            &HashMap::new(),
+            &type_definitions,
+            &def.body,
+        )
+        .map_err(|e| format!("In definition of {}: {}", def.name, e))?;
+        global_scope_types.insert(def.name.clone(), typ);
+    }
+
+    let init_type = global_scope_types
+        .get(&ident("init"))
+        .ok_or("`init` value should be defined at top-level".to_string())?;
+
+    let update_function_type = global_scope_types
+        .get(&ident("update_handler"))
+        .ok_or("`update_handler` function should be defined at top-level".to_string())?;
+
+    if let Type::Function {
+        args,
+        return_type: _,
+    } = update_function_type
+    {
+        let first_type = args
+            .first()
+            .ok_or("`update_handler` function should take 2 arguments: game state and delta")?;
+        let second_type = args
+            .get(1)
+            .ok_or("`update_handler` function should take 2 arguments: game state and delta")?;
+        if first_type != init_type {
+            return Err(format!("First argument to `update_handler` should be of the same type as `init`, got {first_type} and {init_type}."));
+        }
+        if *second_type != float_type() {
+            return Err(format!(
+                "Second argument to `update_handler` should be of type Float, got {second_type}."
+            ));
+        }
+        // TODO: check return type
+    }
+
+    // TODO: check `event_handler`
+
+    Ok(())
 }
 
 // < x = 5.0; y = 7.0; > -> pt2(5.0,7.0)
@@ -196,18 +272,9 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
     let mut global_scope = vvcl::utils::default_global_scope();
     global_scope.extend(vvcl::utils::map_from_defs(reduced_defs));
 
-    let game_state = global_scope
-        .get(&vvcl::utils::ident("init"))
-        .unwrap()
-        .clone();
-    let update_function = global_scope
-        .get(&vvcl::utils::ident("update_handler"))
-        .unwrap()
-        .clone();
-    let event_function = global_scope
-        .get(&vvcl::utils::ident("event_handler"))
-        .unwrap()
-        .clone();
+    let game_state = global_scope.get(&ident("init")).unwrap().clone();
+    let update_function = global_scope.get(&ident("update_handler")).unwrap().clone();
+    let event_function = global_scope.get(&ident("event_handler")).unwrap().clone();
 
     Runtime {
         global_scope,
@@ -223,8 +290,8 @@ fn key_down(model: &mut Model, key: Key) {
     let event_enum = vvcl::utils::enum_variant("Event", "KeyDown", Some(key_enum));
 
     let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(vvcl::utils::ident("event"), event_enum);
-    local_scope.insert(vvcl::utils::ident("game"), model.runtime.game_state.clone());
+    local_scope.insert(ident("event"), event_enum);
+    local_scope.insert(ident("game"), model.runtime.game_state.clone());
 
     let evaled = vvcl::eval::beta_reduction(
         &model.runtime.global_scope,
@@ -248,8 +315,8 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
     let event_enum = vvcl::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
 
     let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(vvcl::utils::ident("event"), event_enum);
-    local_scope.insert(vvcl::utils::ident("game"), model.runtime.game_state.clone());
+    local_scope.insert(ident("event"), event_enum);
+    local_scope.insert(ident("game"), model.runtime.game_state.clone());
 
     let evaled = vvcl::eval::beta_reduction(
         &model.runtime.global_scope,
@@ -282,21 +349,20 @@ pub fn model(app: &App) -> Model {
 fn extract_state_and_commands(function: vvcl::ast::Expr) -> (vvcl::ast::Expr, Vec<Command>) {
     if let vvcl::ast::Expr::Function(f) = function {
         if let vvcl::ast::Expr::Record(r) = *f.body {
-            let game_state = r.get(&vvcl::utils::ident("game")).unwrap().clone();
-            let commands =
-                if let vvcl::ast::Expr::List(l) = r.get(&vvcl::utils::ident("commands")).unwrap() {
-                    let mut ret = vec![];
-                    for command in l {
-                        if let vvcl::ast::Expr::EnumVariant(ev) = command {
-                            ret.push(command_from_record(ev));
-                        } else {
-                            panic!("expected Enum Variant of Command, got {command:?}")
-                        }
+            let game_state = r.get(&ident("game")).unwrap().clone();
+            let commands = if let vvcl::ast::Expr::List(l) = r.get(&ident("commands")).unwrap() {
+                let mut ret = vec![];
+                for command in l {
+                    if let vvcl::ast::Expr::EnumVariant(ev) = command {
+                        ret.push(command_from_record(ev));
+                    } else {
+                        panic!("expected Enum Variant of Command, got {command:?}")
                     }
-                    ret
-                } else {
-                    panic!("expected list of commands, got `IDK` lol");
-                };
+                }
+                ret
+            } else {
+                panic!("expected list of commands, got `IDK` lol");
+            };
             (game_state, commands)
         } else {
             panic!("Expected Record from update, got {:?}", *f.body)
@@ -322,8 +388,8 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
     let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
     let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(vvcl::utils::ident("delta"), vvcl::ast::Expr::Float(delta));
-    local_scope.insert(vvcl::utils::ident("game"), model.runtime.game_state.clone());
+    local_scope.insert(ident("delta"), vvcl::ast::Expr::Float(delta));
+    local_scope.insert(ident("game"), model.runtime.game_state.clone());
 
     let updated = vvcl::eval::beta_reduction(
         &model.runtime.global_scope,
