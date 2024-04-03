@@ -48,15 +48,17 @@ fn main() {
             TopLevelDefinition::Expr(e) => exprs.push(e),
         }
     }
+    let mut global_scope_types = HashMap::new();
 
     for def in &exprs {
-        dbg!(typ_check::check(
-            &HashMap::new(),
+        let typ = dbg!(typ_check::check(
+            &global_scope_types,
             &HashMap::new(),
             &type_definitions,
             &def.body
         ))
         .unwrap();
+        global_scope_types.insert(def.name.clone(), typ);
     }
     return;
 
