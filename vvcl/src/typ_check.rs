@@ -513,6 +513,8 @@ pub fn check(
                         Err("Called function with too many arguments".to_string())
                     }
                     std::cmp::Ordering::Less => {
+                        // TODO: I think we should create new temporary function `Expr` that takes
+                        // remaining arguments and in the body calls the target function
                         Err("Partial application not implemented yet!".to_string())
                     }
                     std::cmp::Ordering::Equal => {
