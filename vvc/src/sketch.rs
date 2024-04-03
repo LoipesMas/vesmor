@@ -8,7 +8,11 @@ use nannou::{
     prelude::*,
     wgpu::{Backends, DeviceDescriptor, Limits},
 };
-use vvcl::utils::ident;
+use vvcl::{
+    ast::Ident,
+    typ_check::{float_type, Type, TypeName},
+    utils::ident,
+};
 
 #[derive(Clone)]
 pub struct SourceCode {
@@ -19,8 +23,12 @@ pub struct SourceCode {
 
 impl Default for SourceCode {
     fn default() -> Self {
+        let file_path = "static/game.vvc";
+        let code =
+            std::fs::read_to_string(file_path).expect("Should have been able to read the file");
+        // let code: String = include_str!("../static/game.vvc").to_string();
         Self {
-            code: include_str!("../static/game.vvc").to_string(),
+            code,
             acknowledged: false,
             hot_reload: false,
         }
@@ -96,6 +104,23 @@ struct Runtime {
     event_function: vvcl::ast::Expr,
 }
 
+fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
+    let vec2_type = Type::Record([(ident("x"), float_type()), (ident("y"), float_type())].into());
+    type_definitions.insert(ident("Vec2"), vec2_type.clone());
+    let draw_line_body = Type::Record(
+        [
+            (ident("start"), vec2_type.clone()),
+            (ident("end"), vec2_type.clone()),
+        ]
+        .into(),
+    );
+    let command_enum = Type::Enum {
+        enu: ident("Command"),
+        variants: [(ident("DrawLine"), Some(draw_line_body))].into(),
+    };
+    type_definitions.insert(ident("Command"), command_enum.clone());
+}
+
 fn init_runtime(source_code: &SourceCode) -> Runtime {
     let contents = &source_code.code;
 
@@ -109,9 +134,38 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
         panic!("parsing failed! input left:\n{input}");
     };
 
+    let mut type_definitions = vvcl::typ_check::default_type_definitions();
+    extend_type_definitions(&mut type_definitions);
+
+    let mut exprs = vec![];
+
+    for def in defs.into_iter() {
+        match def {
+            vvcl::parse::TopLevelDefinition::Type(t) => {
+                type_definitions.insert(t.name, t.body.to_type(&type_definitions).unwrap());
+            }
+            vvcl::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
+        }
+    }
+    let mut global_scope_types =
+        vvcl::builtin_functions::builtin_function_type_definitions(&type_definitions);
+
+    for def in &exprs {
+        dbg!(&def.name);
+        let typ = vvcl::typ_check::check(
+            &global_scope_types,
+            &HashMap::new(),
+            &type_definitions,
+            &def.body,
+        )
+        .unwrap();
+        dbg!(&typ);
+        global_scope_types.insert(def.name.clone(), typ);
+    }
+
     // 1st pass of "compilation"
     // without global scope
-    let reduced_defs: Vec<vvcl::ast::Definition> = defs
+    let reduced_defs: Vec<vvcl::ast::Definition> = exprs
         .iter()
         .map(|d| vvcl::ast::Definition {
             body: vvcl::eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),

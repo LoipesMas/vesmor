@@ -1,3 +1,5 @@
+neg = (a: Float) -> Float (0.0 -. a);
+
 min = (a: Float, b: Float) -> Float {
     ? (a <. b)
     | True` => a;
@@ -15,8 +17,6 @@ abs = (a: Float) -> Float {
     | True` => a;
     | False` => neg(a);
 };
-
-neg = (a: Float) -> Float (0.0 -. a);
 
 vec2 = (x: Float, y: Float) -> Vec2 {
     < x = x; y = y;>
@@ -57,14 +57,6 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
     ]
 };
 
-ball_init = <
-    position = vec2(0.0, 0.0);
-    speed = ? list_get(ball_speeds, 0)
-        | Some` speed => speed;
-        | None` => vec2(200.0,100.0);
-        ;
->;
-
 ball_speed = vec2(450.0, 0.0);
 
 rotated_ball_speed = (angle: Float) -> Vec2 {
@@ -76,13 +68,17 @@ ball_speeds = list_map(
     rotated_ball_speed
 );
 
-init = <
-        player_left = vec2(neg(player_offset),0.0);
-        player_right = vec2(player_offset,0.0);
-        ball = ball_init;
-        round = 0;
-     >
-;
+Ball : <
+    position: Vec2,
+    speed: Vec2,
+>;
+ball_init = <
+    position = vec2(0.0, 0.0);
+    speed = ? list_get(ball_speeds, 0)
+        | Some` speed => speed;
+        | None` => vec2(200.0,100.0);
+        ;
+>;
 
 ball_size = 5.0;
 ball_size_half = (ball_size /. 2.0);
@@ -93,6 +89,23 @@ player_offset = 300.0;
 player_move_speed = 3.0;
 
 arena_size_half = 325.0;
+
+
+
+Game : <
+        player_left : Vec2,
+        player_right : Vec2,
+        ball : Ball,
+        round: Int,
+>;
+
+init = <
+        player_left = vec2(neg(player_offset),0.0);
+        player_right = vec2(player_offset,0.0);
+        ball = ball_init;
+        round = 0;
+     >
+;
 
 draw_arena = draw_box(vec2(0.0,0.0), arena_size_half);
 
