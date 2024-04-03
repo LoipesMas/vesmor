@@ -1,9 +1,9 @@
-User = $<
+User: <
     name: String,
     password: String,
     >;
 
-Admin = $<
+Admin: <
     user: User,
     level: Int,
     >;

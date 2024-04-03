@@ -333,13 +333,10 @@ pub fn expr(input: Span) -> PResult<Expr> {
 
 fn record_definition(input: Span) -> PResult<RecordTypeName> {
     map(
-        preceded(
-            tag("$"),
-            delimited(
-                tag("<"),
-                terminated(separated_list1(tag(","), arg_def), opt(tag(","))),
-                tag(">"),
-            ),
+        delimited(
+            tag("<"),
+            terminated(separated_list1(tag(","), arg_def), opt(tag(","))),
+            tag(">"),
         ),
         |members| RecordTypeName {
             members: members.into_iter().map(|a| (a.name, a.typ)).collect(),
@@ -354,7 +351,7 @@ fn type_definition_body(input: Span) -> PResult<TypeName> {
 fn type_definition(input: Span) -> PResult<TypeDef> {
     map(
         terminated(
-            separated_pair(ident, tag("="), type_definition_body),
+            separated_pair(ident, tag(":"), type_definition_body),
             tag(";"),
         ),
         |(name, body)| TypeDef { name, body },
