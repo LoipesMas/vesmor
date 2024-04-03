@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 use crate::{
-    ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall},
+    ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall, Ident},
     eval::ScopeMap,
     typ_check::{
         generic_list_type_name, generic_option_type_name, type_hole_name, FunctionTypeName,
-        NormalTypeName, TypeName,
+        NormalTypeName, Type, TypeName,
     },
     utils::{expr_option_to_enum, ident},
 };
@@ -229,6 +231,42 @@ pub fn scope_with_builtin_functions() -> ScopeMap {
         (ident("list_size"), list_size()),
         (ident("sin"), sin()),
         (ident("cos"), cos()),
+    ]
+    .into()
+}
+
+pub fn builtin_function_type_definitions(
+    type_definitions: &HashMap<Ident, Type>,
+) -> HashMap<Ident, Type> {
+    [
+        (
+            ident("double"),
+            Type::from_function_def_unchecked(&double(), type_definitions),
+        ),
+        (
+            ident("int_to_str"),
+            Type::from_function_def_unchecked(&int_to_str(), type_definitions),
+        ),
+        (
+            ident("list_map"),
+            Type::from_function_def_unchecked(&list_map(), type_definitions),
+        ),
+        (
+            ident("list_get"),
+            Type::from_function_def_unchecked(&list_get(), type_definitions),
+        ),
+        (
+            ident("list_size"),
+            Type::from_function_def_unchecked(&list_size(), type_definitions),
+        ),
+        (
+            ident("sin"),
+            Type::from_function_def_unchecked(&sin(), type_definitions),
+        ),
+        (
+            ident("cos"),
+            Type::from_function_def_unchecked(&cos(), type_definitions),
+        ),
     ]
     .into()
 }

@@ -8,6 +8,7 @@ mod utils;
 use utils::ident;
 mod typ_check;
 
+use crate::builtin_functions::builtin_function_type_definitions;
 use crate::{parse::TopLevelDefinition, typ_check::default_type_definitions};
 use ast::Definition;
 use utils::{default_global_scope, wrap_in_span};
@@ -38,6 +39,8 @@ fn main() {
 
     let mut type_definitions = default_type_definitions();
 
+    dbg!(type_definitions.keys());
+
     let mut exprs = vec![];
 
     for def in defs.into_iter() {
@@ -48,7 +51,7 @@ fn main() {
             TopLevelDefinition::Expr(e) => exprs.push(e),
         }
     }
-    let mut global_scope_types = HashMap::new();
+    let mut global_scope_types = builtin_function_type_definitions(&type_definitions);
 
     for def in &exprs {
         let typ = dbg!(typ_check::check(

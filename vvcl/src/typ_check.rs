@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident, Record},
+    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Function, Ident, Record},
     utils::ident,
 };
 
@@ -77,6 +77,7 @@ pub fn string_type() -> Type {
 
 pub fn default_type_definitions() -> TypeMap {
     [
+        (ident("_"), Type::Hole),
         (ident("Option"), generic_option_type()),
         (ident("List"), generic_list_type()),
         (ident("Bool"), bool_enum()),
@@ -110,6 +111,21 @@ impl Type {
         Self::Simple {
             name: ident(name),
             subtype: None,
+        }
+    }
+
+    pub(crate) fn from_function_def_unchecked(fun: &Expr, type_definitions: &TypeMap) -> Self {
+        if let Expr::Function(fun) = fun {
+            Type::Function {
+                args: fun
+                    .arguments
+                    .iter()
+                    .map(|d| d.typ.to_type(type_definitions).unwrap())
+                    .collect(),
+                return_type: Box::new(fun.return_type.to_type(type_definitions).unwrap()),
+            }
+        } else {
+            panic!("gimme function")
         }
     }
 
@@ -431,6 +447,7 @@ pub fn check(
         }
         Expr::Function(f) => {
             let mut new_scope = TypeMap::new();
+            let mut args = Vec::with_capacity(f.arguments.len());
             for arg in &f.arguments {
                 let arg_type = arg.typ.to_type(type_definitions)?;
                 if arg_type.has_holes() {
@@ -438,6 +455,7 @@ pub fn check(
                         "Argument types with holes not supported (yet). ({arg_type})"
                     ));
                 }
+                args.push(arg_type.clone());
                 new_scope.insert(arg.name.clone(), arg_type);
             }
             let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)?;
@@ -449,7 +467,7 @@ pub fn check(
             } else {
                 let matched = return_type_type.matches(&evaled_type)?;
                 Ok(Type::Function {
-                    args: new_scope.into_values().collect(),
+                    args,
                     return_type: Box::new(matched),
                 })
             }
@@ -467,7 +485,10 @@ pub fn check(
                         Err("Partial application not implemented yet!".to_string())
                     }
                     std::cmp::Ordering::Equal => {
-                        if call_arg_types.iter().zip(args.iter()).all(|(a, b)| a == b) {
+                        if args.iter().any(|a| a.has_holes()) {
+                            // TODO: this is a HACK for builtin functions
+                            Ok(*return_type)
+                        } else if call_arg_types.iter().zip(args.iter()).all(|(a, b)| a == b) {
                             Ok(*return_type)
                         } else {
                             Err(format!(
@@ -681,7 +702,7 @@ fn check_bin_opt(
             }
         }
         BoolOr | BoolAnd => {
-            if left == right && left == Type::simple("Bool") {
+            if left == right && left == bool_enum() {
                 Ok(bool_enum())
             } else {
                 Err(format!(
