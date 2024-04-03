@@ -174,7 +174,6 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
         vvcl::builtin_functions::builtin_function_type_definitions(&type_definitions);
 
     for def in &exprs {
-        dbg!(&def.name);
         let typ = vvcl::typ_check::check(
             &global_scope_types,
             &HashMap::new(),
@@ -182,7 +181,6 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
             &def.body,
         )
         .unwrap();
-        dbg!(&typ);
         global_scope_types.insert(def.name.clone(), typ);
     }
 
@@ -240,8 +238,8 @@ fn key_down(model: &mut Model, key: Key) {
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
-    let was_present = model.pressed_keys.insert(key);
-    if was_present {
+    let is_new = model.pressed_keys.insert(key);
+    if !is_new {
         // only send event if key wasn't already pressed
         return;
     }
