@@ -462,7 +462,10 @@ pub fn check(
         Expr::Block(b) => {
             let mut new_scope = local_scope.clone();
             for def in &b.definitions {
-                new_scope.insert(def.name.clone(), c(&def.body)?);
+                new_scope.insert(
+                    def.name.clone(),
+                    check(global_scope, &new_scope, type_definitions, &def.body)?,
+                );
             }
             check(global_scope, &new_scope, type_definitions, &b.expr)
         }

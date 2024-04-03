@@ -10,7 +10,7 @@ use nannou::{
 };
 use vvcl::{
     ast::Ident,
-    typ_check::{float_type, Type, TypeName},
+    typ_check::{float_type, Type},
     utils::ident,
 };
 
@@ -94,6 +94,7 @@ pub struct Model {
     line_weight: f32,
     commands: Vec<Command>,
     runtime: Runtime,
+    // TODO: I think we could just use app.keys instead
     pressed_keys: HashSet<Key>,
 }
 
@@ -102,6 +103,27 @@ struct Runtime {
     game_state: vvcl::ast::Expr,
     update_function: vvcl::ast::Expr,
     event_function: vvcl::ast::Expr,
+}
+
+macro_rules! keys {
+    ($($tag:ident),*) => {
+        [ $(Key::$tag),*]
+    };
+}
+
+fn event_enum() -> Type {
+    let keys = keys![A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z];
+    let keys_enum = Type::Enum {
+        enu: ident("Key"),
+        variants: keys.map(|k| (ident(&format!("{k:?}")), None)).into(),
+    };
+    let event_variants = ["KeyPressed", "KeyDown"]
+        .map(|v| (ident(v), Some(keys_enum.clone())))
+        .into();
+    Type::Enum {
+        enu: ident("Event"),
+        variants: event_variants,
+    }
 }
 
 fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
@@ -119,6 +141,7 @@ fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
         variants: [(ident("DrawLine"), Some(draw_line_body))].into(),
     };
     type_definitions.insert(ident("Command"), command_enum.clone());
+    type_definitions.insert(ident("Event"), event_enum().clone());
 }
 
 fn init_runtime(source_code: &SourceCode) -> Runtime {

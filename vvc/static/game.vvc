@@ -129,6 +129,8 @@ check_player_ball_collision = (ball_pos: Vec2,player_pos: Vec2) -> Bool {
     (y_check && x_check)
 };
 
+Side : | Left` | Right`;
+
 bounce_ball_player = (game: Game, side: Side) -> Vec2 {
     ball = @game.ball;
     speed = @ball.speed;
@@ -193,6 +195,8 @@ clamp_player_pos = (pos: Vec2) -> Vec2 {
     new_pos_y = min(inner_arena_size, max(neg(inner_arena_size), pos_y));
     < pos | y = new_pos_y;>
 };
+
+GameAndCommands : < game: Game, commands: List<Command>>;
 
 update_handler = (game: Game, delta: Float) -> GameAndCommands {
     ball = ball_movement(game, delta);
