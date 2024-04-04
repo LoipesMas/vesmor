@@ -273,8 +273,18 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
     global_scope.extend(vvcl::utils::map_from_defs(reduced_defs));
 
     let game_state = global_scope.get(&ident("init")).unwrap().clone();
-    let update_function = global_scope.get(&ident("update_handler")).unwrap().clone();
-    let event_function = global_scope.get(&ident("event_handler")).unwrap().clone();
+    let update_function =
+        if let vvcl::ast::Expr::Function(f) = global_scope.get(&ident("update_handler")).unwrap() {
+            *f.body.clone()
+        } else {
+            panic!("`update_handler` should have been a function.")
+        };
+    let event_function =
+        if let vvcl::ast::Expr::Function(f) = global_scope.get(&ident("event_handler")).unwrap() {
+            *f.body.clone()
+        } else {
+            panic!("`event_handler` should have been a function.")
+        };
 
     Runtime {
         global_scope,
@@ -346,30 +356,25 @@ pub fn model(app: &App) -> Model {
     })
 }
 
-fn extract_state_and_commands(function: vvcl::ast::Expr) -> (vvcl::ast::Expr, Vec<Command>) {
-    if let vvcl::ast::Expr::Function(f) = function {
-        if let vvcl::ast::Expr::Record(r) = *f.body {
-            let game_state = r.get(&ident("game")).unwrap().clone();
-            let commands = if let vvcl::ast::Expr::List(l) = r.get(&ident("commands")).unwrap() {
-                let mut ret = vec![];
-                for command in l {
-                    if let vvcl::ast::Expr::EnumVariant(ev) = command {
-                        ret.push(command_from_record(ev));
-                    } else {
-                        panic!("expected Enum Variant of Command, got {command:?}")
-                    }
+fn extract_state_and_commands(result: vvcl::ast::Expr) -> (vvcl::ast::Expr, Vec<Command>) {
+    if let vvcl::ast::Expr::Record(r) = result {
+        let game_state = r.get(&ident("game")).unwrap().clone();
+        let commands = if let vvcl::ast::Expr::List(l) = r.get(&ident("commands")).unwrap() {
+            let mut ret = vec![];
+            for command in l {
+                if let vvcl::ast::Expr::EnumVariant(ev) = command {
+                    ret.push(command_from_record(ev));
+                } else {
+                    panic!("expected Enum Variant of Command, got {command:?}")
                 }
-                ret
-            } else {
-                panic!("expected list of commands, got `IDK` lol");
-            };
-            (game_state, commands)
+            }
+            ret
         } else {
-            panic!("Expected Record from update, got {:?}", *f.body)
-        }
+            panic!("expected list of commands, got `IDK` lol");
+        };
+        (game_state, commands)
     } else {
-        // this should be unreachable, unless I made some mistakes ;p
-        unreachable!()
+        panic!("Expected Record from update, got {:?}", result)
     }
 }
 
