@@ -57,7 +57,9 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
     ]
 };
 
-ball_speed = vec2(450.0, 0.0);
+ball_speed = vec2(300.0, 0.0);
+bounce_speed_multiplier = 1.09;
+
 
 rotated_ball_speed = (angle: Float) -> Vec2 {
     rotate_vec2(ball_speed, angle)
@@ -133,15 +135,15 @@ Side : | Left` | Right`;
 
 bounce_ball_player = (game: Game, side: Side) -> Vec2 {
     ball = @game.ball;
-    speed = @ball.speed;
+    new_speed = mul_vec2_scalar(@ball.speed, bounce_speed_multiplier);
     player_pos = ? side
         | Left` => @game.player_left;
         | Right` => @game.player_right;
         ;
     ? check_player_ball_collision(@ball.position, player_pos)
     | True` => ? side
-        | Left` => < speed | x = abs(@speed.x);>;
-        | Right` => < speed | x = neg(abs(@speed.x));>;
+        | Left` => < new_speed | x = abs(@new_speed.x);>;
+        | Right` => < new_speed | x = neg(abs(@new_speed.x));>;
         ;
     | False` => @ball.speed;
 };
