@@ -14,6 +14,10 @@ user = (name: String, password: String) -> User {
     <name=name; password=password;>
 };
 
-main = (a: Bool, b: Int) -> SomeEnum {
-    SomeEnum::Lol` 5
+triple = (a: Int) -> Int {
+    double((a*3))
+};
+
+main = (a: Bool, b: Int) -> List<Int> {
+    list_map([b,5, 1345645], triple)
 };

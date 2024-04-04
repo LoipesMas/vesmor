@@ -71,15 +71,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
             };
             apply_binary_operation(bo)
         }
-        Expr::Function(Function {
-            arguments,
-            return_type,
-            body,
-        }) => Expr::Function(Function {
-            arguments: arguments.clone(),
-            return_type: return_type.clone(),
-            body: Box::new(brl(body)),
-        }),
+        Expr::Function(_) => e.clone(),
         Expr::FunctionCall(fc) => {
             let function = if let Expr::Function(_) = *fc.function {
                 *fc.function.clone()

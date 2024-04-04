@@ -63,7 +63,7 @@ fn main() {
         .unwrap();
         global_scope_types.insert(def.name.clone(), typ);
     }
-    return;
+    // return;
 
     // 1st pass of "compilation"
     // without global scope
@@ -104,10 +104,15 @@ fn main() {
 
     let t0 = Instant::now();
 
+    let main_body = if let ast::Expr::Function(f) = main_body {
+        &*f.body
+    } else {
+        main_body
+    };
+
     let res = eval::beta_reduction(&global_scope, &local_scope, main_body);
     let t1 = Instant::now();
     dbg!(t1 - t0);
     dbg!(&res);
-    let fin = utils::get_function_value(res).unwrap();
-    println!("output: {}", fin);
+    println!("output: {:?}", res);
 }
