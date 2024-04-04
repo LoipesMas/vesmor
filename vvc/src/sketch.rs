@@ -167,6 +167,7 @@ fn command_from_record(ev: &vvcl::ast::EnumVariant) -> Command {
 
 pub struct Model {
     color: Rgb<u8>,
+    bg_color: Rgb<u8>,
     line_weight: f32,
     commands: Vec<Command>,
     runtime: Runtime,
@@ -347,8 +348,9 @@ pub fn model(app: &App) -> Model {
     SOURCE_CODE.with_borrow_mut(|sc| {
         sc.acknowledged = true;
         Model {
-            color: GREEN,
-            line_weight: 4.0,
+            color: rgb8(255, 125, 0),
+            bg_color: rgb8(0, 21, 36),
+            line_weight: 1.0,
             commands: vec![],
             runtime: init_runtime(sc),
             pressed_keys: HashSet::new(),
@@ -413,7 +415,7 @@ fn update(_app: &App, model: &mut Model, update: Update) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    frame.clear(BLACK);
+    frame.clear(model.bg_color);
     let draw = app.draw();
 
     for command in &model.commands {

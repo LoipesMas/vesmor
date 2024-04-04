@@ -3,28 +3,22 @@
   <head>
     <meta charset="UTF-8">
     <title>VVC</title>
-    <style>
-body {
-    background-color: #222222;
-}
-
-#sourceText {
-	width: 720px;
-	height: 720px;
-	background-color: #222222;
-	border: 0;
-	font-size: larger;
-	color: #dfe1a5;
-}
-    </style>
+    <link rel="stylesheet" href="index.css">
   </head>
-  <body>
+  <body class="main-box">
     <script src="index.js"></script>
+
+    <div class="btn-group">
     <textarea type="text" name="" value="" id="sourceText" 
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
         ></textarea>
-    <button type="" onclick="full_reload()">full reload</button>
-    <button type="" onclick="hot_reload()">hot reload</button>
-    <button type="" onclick="reset_code()">reset code</button>
+    <p id="output"></p>
+    </div>
+
+    <div class="btn-group">
+        <button type="" onclick="full_reload()">FULL RELOAD</button>
+        <button type="" onclick="hot_reload()">HOT RELOAD</button>
+        <button type="" onclick="reset_code()">RESET CODE</button>
+    </div>
   </body>
 </html>
