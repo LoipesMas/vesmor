@@ -120,7 +120,6 @@ fn int_expr(input: Span) -> PResult<Expr> {
 }
 
 fn float_expr(input: Span) -> PResult<Expr> {
-    // TODO: use nom's double
     map(
         map_res(
             recognize(pair(

@@ -1,14 +1,18 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Function, Ident, Record},
+    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident},
     utils::ident,
 };
 
 pub fn generic_option_type() -> Type {
     Type::Enum {
         enu: ident("Option"),
-        variants: [(ident("None"), None), (ident("Some"), Some(Type::Hole))].into(),
+        variants: [
+            (ident("None"), None),
+            (ident("Some"), Some(Type::Hole(ident("T")))),
+        ]
+        .into(),
     }
 }
 
@@ -29,7 +33,7 @@ pub fn concrete_option_type(typ: Type) -> Type {
 pub fn generic_list_type() -> Type {
     Type::Simple {
         name: ident("List"),
-        subtype: Some(Box::new(Type::Hole)),
+        subtype: Some(Box::new(Type::Hole(ident("T")))),
     }
 }
 
@@ -77,7 +81,7 @@ pub fn string_type() -> Type {
 
 pub fn default_type_definitions() -> TypeMap {
     [
-        (ident("_"), Type::Hole),
+        (ident("_"), Type::Hole(ident("T"))),
         (ident("Option"), generic_option_type()),
         (ident("List"), generic_list_type()),
         (ident("Bool"), bool_enum()),
@@ -90,7 +94,7 @@ pub fn default_type_definitions() -> TypeMap {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
-    Hole,
+    Hole(Ident),
     Simple {
         name: Ident,
         subtype: Option<Box<Type>>,
@@ -133,10 +137,10 @@ impl Type {
         if self == other {
             return Ok(self.clone());
         }
-        if matches!(self, Type::Hole) {
+        if matches!(self, Type::Hole(_)) {
             return Ok(other.clone());
         };
-        if matches!(other, Type::Hole) {
+        if matches!(other, Type::Hole(_)) {
             return Ok(self.clone());
         };
         match (self, other) {
@@ -219,18 +223,43 @@ impl Type {
                     Ok(Type::Record(new_members))
                 }
             }
+            (
+                Type::Function {
+                    args: args_a,
+                    return_type: return_type_a,
+                },
+                Type::Function {
+                    args: args_b,
+                    return_type: return_type_b,
+                },
+            ) => {
+                if args_a.len() != args_b.len() {
+                    return Err(format!("Types don't match: {self} and {other}"));
+                }
+                let args = args_a
+                    .iter()
+                    .zip(args_b.iter())
+                    .map(|(a, b)| a.matches(b))
+                    .collect::<Result<_, _>>()?;
+                let return_type = return_type_a.matches(return_type_b)?;
+                Ok(Type::Function {
+                    args,
+                    return_type: Box::new(return_type),
+                })
+            }
             _ => Err(format!("Types don't match: {self} and {other}")),
         }
     }
 
+    // TODO: use type hole ident?
     pub fn fill_type_hole(self, typ: Type) -> Self {
         match self {
-            Type::Hole => typ,
+            Type::Hole(_) => typ,
             Type::Simple {
                 ref name,
                 ref subtype,
             } => match subtype.as_deref() {
-                Some(Type::Hole) => Type::Simple {
+                Some(Type::Hole(_)) => Type::Simple {
                     name: name.clone(),
                     subtype: Some(Box::new(typ)),
                 },
@@ -256,7 +285,7 @@ impl Type {
 
     pub fn has_holes(&self) -> bool {
         match self {
-            Type::Hole => true,
+            Type::Hole(_) => true,
             Type::Simple { name: _, subtype } => {
                 subtype.as_deref().map(Type::has_holes).unwrap_or(false)
             }
@@ -289,8 +318,8 @@ impl std::fmt::Display for Type {
                 write!(f, "}}")?;
                 Ok(())
             }
-            Self::Hole => {
-                write!(f, "_")
+            Self::Hole(i) => {
+                write!(f, "{i}")
             }
             _ => write!(f, "{self:?}"),
         }
@@ -330,15 +359,14 @@ pub enum TypeName {
 
 impl NormalTypeName {
     pub fn to_type(&self, type_definitions: &TypeMap) -> Result<Type, String> {
+        if let Some(r) = self.name.0.strip_prefix('*') {
+            return Ok(Type::Hole(ident(r)));
+        };
         if let Some(typ) = type_definitions.get(&self.name) {
             if let Some(subtype) = &self.subtype {
-                if subtype.name.0 == "_" {
-                    Ok(typ.clone())
-                } else {
-                    let subtype = subtype.to_type(type_definitions)?;
-                    let new_typ = typ.clone().fill_type_hole(subtype);
-                    Ok(new_typ)
-                }
+                let subtype = subtype.to_type(type_definitions)?;
+                let new_typ = typ.clone().fill_type_hole(subtype);
+                Ok(new_typ)
             } else {
                 Ok(typ.clone())
             }
@@ -437,7 +465,7 @@ pub fn check(
             match &types[..] {
                 [] => Ok(Type::Simple {
                     name: ident("List"),
-                    subtype: Some(Box::new(Type::Hole)),
+                    subtype: Some(Box::new(Type::Hole(ident("T")))),
                 }),
                 [subtype] => Ok(Type::Simple {
                     name: ident("List"),
@@ -520,7 +548,44 @@ pub fn check(
                     std::cmp::Ordering::Equal => {
                         if args.iter().any(|a| a.has_holes()) {
                             // TODO: this is a HACK for builtin functions
-                            Ok(*return_type)
+                            if let Expr::Value(ref i) = *fc.function {
+                                // TODO: this is a HACK for list_map typing
+                                // TODO: do something similar for list_get ;]
+                                if i.0 == "list_map" {
+                                    let first_arg_type = &call_arg_types[0];
+                                    let second_arg_type = &call_arg_types[1];
+                                    let _ = first_arg_type.matches(&args[0])?;
+                                    let _ = second_arg_type.matches(&args[1])?;
+                                    if let Type::Function {
+                                        args: mapping_fun_args,
+                                        return_type: mapping_fun_ret_type,
+                                    } = second_arg_type
+                                    {
+                                        let mapping_input_type = &mapping_fun_args[0];
+                                        if let Type::Simple { name, subtype } = first_arg_type {
+                                            let subtype = subtype.as_deref().unwrap();
+                                            if mapping_input_type.matches(subtype).is_err() {
+                                                return Err(format!(
+                                                    "Mapping function expected to take type {subtype} but takes {mapping_input_type}"
+                                                ));
+                                            }
+
+                                            Ok(Type::Simple {
+                                                name: name.clone(),
+                                                subtype: Some(mapping_fun_ret_type.clone()),
+                                            })
+                                        } else {
+                                            unreachable!("or so I thought")
+                                        }
+                                    } else {
+                                        unreachable!("or so I thought")
+                                    }
+                                } else {
+                                    Ok(*return_type)
+                                }
+                            } else {
+                                Ok(*return_type)
+                            }
                         } else if call_arg_types.iter().zip(args.iter()).all(|(a, b)| a == b) {
                             Ok(*return_type)
                         } else {

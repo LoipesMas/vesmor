@@ -18,6 +18,10 @@ triple = (a: Int) -> Int {
     double((a*3))
 };
 
-main = (a: Bool, b: Int) -> List<Int> {
-    list_map([b,5, 1345645], triple)
+takes_string = (a: String) -> String {
+    a
+};
+
+main = (a: Bool, b: Int) -> List<String> {
+    list_map([b,5, 1345645], int_to_str)
 };

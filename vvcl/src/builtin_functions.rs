@@ -104,23 +104,35 @@ fn list_map() -> Expr {
         arguments: vec![
             ArgDef {
                 name: ident("list"),
-                typ: generic_list_type_name(),
+                typ: TypeName::Normal(NormalTypeName {
+                    name: ident("List"),
+                    subtype: Some(Box::new(NormalTypeName {
+                        name: ident("*I"),
+                        subtype: None,
+                    })),
+                }),
             },
             ArgDef {
                 name: ident("function"),
                 typ: TypeName::Function(FunctionTypeName {
                     args: vec![NormalTypeName {
-                        name: ident("_"),
+                        name: ident("*I"),
                         subtype: None,
                     }],
                     return_type: NormalTypeName {
-                        name: ident("_"),
+                        name: ident("*I"),
                         subtype: None,
                     },
                 }),
             },
         ],
-        return_type: TypeName::Normal(type_hole_name()),
+        return_type: TypeName::Normal(NormalTypeName {
+            name: ident("List"),
+            subtype: Some(Box::new(NormalTypeName {
+                name: ident("*O"),
+                subtype: None,
+            })),
+        }),
         body: Box::new(Expr::BuiltInFunction(bif)),
     })
 }
