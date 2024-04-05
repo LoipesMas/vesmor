@@ -49,6 +49,8 @@ fn web_print(s: &str) {
     web_sys::console::log_1(&web_sys::js_sys::JsString::from_str(s).unwrap())
 }
 
+const DEFAULT_VIEWPORT_SIZE: (u32, u32) = (720, 720);
+
 pub fn check_source_code(code: &str) -> Result<(), String> {
     let contents = code.replace(['\n', ' '], "");
     let contents = vvcl::utils::wrap_in_span(&contents);
@@ -173,6 +175,7 @@ pub struct Model {
     runtime: Runtime,
     // TODO: I think we could just use app.keys instead
     pressed_keys: HashSet<Key>,
+    viewport_resolution: Vec2,
 }
 
 struct Runtime {
@@ -354,6 +357,10 @@ pub fn model(app: &App) -> Model {
             commands: vec![],
             runtime: init_runtime(sc),
             pressed_keys: HashSet::new(),
+            viewport_resolution: pt2(
+                DEFAULT_VIEWPORT_SIZE.0 as f32,
+                DEFAULT_VIEWPORT_SIZE.1 as f32,
+            ),
         }
     })
 }
@@ -421,9 +428,11 @@ fn view(app: &App, model: &Model, frame: Frame) {
     for command in &model.commands {
         match command {
             Command::DrawLine { start, end } => {
+                let start = *start * model.viewport_resolution;
+                let end = *end * model.viewport_resolution;
                 draw.line()
-                    .start(*start)
-                    .end(*end)
+                    .start(start)
+                    .end(end)
                     .weight(model.line_weight)
                     .caps_round()
                     .color(model.color);
@@ -459,7 +468,7 @@ async fn create_window(app: &App) {
 
     app.new_window()
         .device_descriptor(device_desc)
-        .size(720, 720)
+        .size(DEFAULT_VIEWPORT_SIZE.0, DEFAULT_VIEWPORT_SIZE.1)
         .title("VVC")
         // .raw_event(raw_event)
         .key_pressed(key_pressed)

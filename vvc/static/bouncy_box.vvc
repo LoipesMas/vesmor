@@ -48,14 +48,14 @@ draw_box = (center: Vec2, size: Float) -> List<Command> {
 Game: <position: Vec2, speed: Vec2>;
 init = <
         position = < x = 0.0; y = 0.0; >;
-        speed = < x = 167.0; y = -200.0; >;
+        speed = < x = 0.23; y = -0.3; >;
      >
 ;
 
-box_size = 300.0;
-bouncer_size = 20.0;
-jump_force = 500.0;
-gravity = vec2(0.0,-700.0);
+box_size = 0.42;
+bouncer_size = 0.03;
+jump_force = 0.7;
+gravity = vec2(0.0,-1.0);
 
 draw_bouncer = (position: Vec2) -> List<Command> {
     draw_box(position, bouncer_size)

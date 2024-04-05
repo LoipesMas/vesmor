@@ -59,7 +59,7 @@ draw_rect = (center: Vec2, size: Vec2) -> List<Command> {
 
 draw_box = (center: Vec2, size: Float) -> List<Command> draw_rect(center, vec2(size, size));
 
-ball_speed = vec2(300.0, 0.0);
+ball_speed = vec2(0.4, 0.0);
 bounce_speed_multiplier = 1.09;
 
 
@@ -80,19 +80,19 @@ ball_init = <
     position = vec2(0.0, 0.0);
     speed = ? list_get(ball_speeds, 0)
         | Some` speed => speed;
-        | None` => vec2(200.0,100.0);
+        | None` => vec2(0.3,0.1);
         ;
 >;
 
-ball_size = 5.0;
+ball_size = 0.007;
 ball_size_half = (ball_size /. 2.0);
 
-player_size = 75.0;
+player_size = 0.15;
 player_size_half = (player_size /. 2.0);
-player_offset = 300.0;
-player_move_speed = 3.0;
+player_offset = 0.41;
+player_move_speed = 0.005;
 
-arena_size_half = 325.0;
+arena_size_half = 0.45;
 
 
 
@@ -117,7 +117,7 @@ draw_ball = (position: Vec2) -> List<Command> {
     draw_box(position, ball_size)
 };
 
-player_width = 3.0;
+player_width = 0.004;
 draw_player = (position: Vec2, side: Side) -> List<Command> {
     size = < x = player_width; y = player_size_half;>;
     offset_x = ? side
