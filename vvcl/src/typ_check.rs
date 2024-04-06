@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident},
-    utils::ident,
+    utils::{ident, ErrWithContext},
 };
 
 pub fn generic_option_type() -> Type {
@@ -161,7 +161,10 @@ impl Type {
                         (None, None) => Ok(self.clone()),
                         (Some(sa), Some(sb)) => Ok(Type::Simple {
                             name: name_a.clone(),
-                            subtype: Some(Box::new(sa.matches(sb)?)),
+                            subtype: Some(Box::new(
+                                sa.matches(sb)
+                                    .with_context(format!("In the subtype of {name_a}: "))?,
+                            )),
                         }),
                         _ => Err(format!("Types don't match: {self} and {other}")),
                     }
@@ -185,7 +188,7 @@ impl Type {
                     let mut variants_b_k = variants_b.keys().collect::<Vec<_>>();
                     variants_b_k.sort_by_key(|i| &i.0);
                     if variants_a_k != variants_b_k {
-                        Err(format!("Types don't match: {self} and {other}"))
+                        Err(format!("Enums have different variants: {self} and {other}"))
                     } else {
                         let mut new_variants = variants_a.clone();
                         for k in variants_a_k {
@@ -194,10 +197,17 @@ impl Type {
                             match (typ_a, typ_b) {
                                 (None, None) => {}
                                 (Some(a), Some(b)) => {
-                                    new_variants.insert(k.clone(), Some(a.matches(b)?));
+                                    new_variants.insert(
+                                        k.clone(),
+                                        Some(a.matches(b).with_context(format!(
+                                            "In enum variant {enu_a}::{k}: "
+                                        ))?),
+                                    );
                                 }
                                 _ => {
-                                    return Err(format!("Types don't match: {self} and {other}"));
+                                    return Err(
+                                        format!("In enum variant {enu_a}::{k}: Types don't match: {self} and {other}")
+                                    );
                                 }
                             }
                         }
@@ -218,7 +228,12 @@ impl Type {
                     for key in a_keys {
                         let member_a = a.get(key).expect("Iterating using known keys.");
                         let member_b = b.get(key).expect("Iterating using known keys.");
-                        new_members.insert(key.clone(), member_a.matches(member_b)?);
+                        new_members.insert(
+                            key.clone(),
+                            member_a
+                                .matches(member_b)
+                                .with_context(format!("In record member {key}: "))?,
+                        );
                     }
                     Ok(Type::Record(new_members))
                 }
@@ -240,8 +255,11 @@ impl Type {
                     .iter()
                     .zip(args_b.iter())
                     .map(|(a, b)| a.matches(b))
-                    .collect::<Result<_, _>>()?;
-                let return_type = return_type_a.matches(return_type_b)?;
+                    .collect::<Result<_, _>>()
+                    .with_context("In arguments of functions: ".to_owned())?;
+                let return_type = return_type_a
+                    .matches(return_type_b)
+                    .with_context("In return type of functions: ".to_owned())?;
                 Ok(Type::Function {
                     args,
                     return_type: Box::new(return_type),
@@ -461,7 +479,11 @@ pub fn check(
         Expr::Float(_) => Ok(Type::simple("Float")),
         Expr::String(_) => Ok(Type::simple("String")),
         Expr::List(list) => {
-            let types = list.iter().map(c).collect::<Result<Vec<_>, _>>()?;
+            let types = list
+                .iter()
+                .map(c)
+                .collect::<Result<Vec<_>, _>>()
+                .with_context("In list values: ".to_owned())?;
             match &types[..] {
                 [] => Ok(Type::Simple {
                     name: ident("List"),
@@ -492,17 +514,21 @@ pub fn check(
             for def in &b.definitions {
                 new_scope.insert(
                     def.name.clone(),
-                    check(global_scope, &new_scope, type_definitions, &def.body)?,
+                    check(global_scope, &new_scope, type_definitions, &def.body)
+                        .with_context(format!("In definition of '{}': ", def.name))?,
                 );
             }
             check(global_scope, &new_scope, type_definitions, &b.expr)
+                .with_context("In block body: ".to_owned())
         }
-        Expr::Value(v) => combined_scope
-            .get(v)
-            .cloned()
-            .ok_or_else(|| format!("Type for value '{v}' not found!")),
+        Expr::Value(v) => combined_scope.get(v).cloned().ok_or_else(|| {
+            format!(
+                "Type for value '{v}' not found! (Probably undefined, possibly type checker error)"
+            )
+        }),
         Expr::BinaryOperation(bin_opt) => {
             check_bin_opt(global_scope, local_scope, type_definitions, bin_opt)
+                .with_context(format!("In binary operation '{:?}': ", bin_opt.operator))
         }
         Expr::Function(f) => {
             let mut new_scope = TypeMap::new();
@@ -517,14 +543,17 @@ pub fn check(
                 args.push(arg_type.clone());
                 new_scope.insert(arg.name.clone(), arg_type);
             }
-            let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)?;
+            let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)
+                .with_context("In function body: ".to_owned())?;
             let return_type_type = f.return_type.to_type(type_definitions)?;
             if return_type_type.has_holes() {
                 Err(format!(
                     "Returning types with holes not supported (yet). ({return_type_type})"
                 ))
             } else {
-                let matched = return_type_type.matches(&evaled_type)?;
+                let matched = return_type_type
+                    .matches(&evaled_type)
+                    .with_context("In function return type: ".to_owned())?;
                 Ok(Type::Function {
                     args,
                     return_type: Box::new(matched),
@@ -620,7 +649,10 @@ pub fn check(
         Expr::Record(r) => {
             let mut new_types = HashMap::new();
             for (k, v) in r.update.iter() {
-                new_types.insert(k.clone(), c(v)?);
+                new_types.insert(
+                    k.clone(),
+                    c(v).with_context(format!("In record member '{k}': "))?,
+                );
             }
             if let Some(base) = &r.base {
                 let base_type = c(base)?;
@@ -637,7 +669,7 @@ pub fn check(
                     Ok(Type::Record(new_types))
                 } else {
                     Err(format!(
-                        "Base argument should be a record, got {base_type} instead"
+                        "Base argument for update should be a record, got {base_type} instead"
                     ))
                 }
             } else {
@@ -645,7 +677,7 @@ pub fn check(
             }
         }
         Expr::RecordAccess(ra) => {
-            let rec_type = c(&ra.record)?;
+            let rec_type = c(&ra.record).with_context("In record access: ".to_owned())?;
             if let Type::Record(ref map) = rec_type {
                 if let Some(t) = map.get(&ra.member) {
                     Ok(t.clone())
@@ -680,7 +712,10 @@ pub fn check(
                             )),
                             (Some(a), Some(b)) => {
                                 let a_typ = c(a)?;
-                                let matched = a_typ.matches(b)?;
+                                let matched = a_typ.matches(b).with_context(format!(
+                                    "In body of enum variant {}::{}: ",
+                                    ev.enu, ev.variant
+                                ))?;
                                 let mut new_variants = variants.clone();
                                 new_variants.insert(ev.variant.clone(), Some(matched));
                                 Ok(Type::Enum {
@@ -703,7 +738,7 @@ pub fn check(
             }
         }
         Expr::EnumMatching(em) => {
-            let value_type = c(&em.value)?;
+            let value_type = c(&em.value).with_context("In enum matching value: ".to_owned())?;
             if let Type::Enum {
                 ref enu,
                 ref variants,
@@ -763,7 +798,7 @@ pub fn check(
                     let result_type = branch_types
                         .iter()
                         .try_fold(branch_types[0].clone(), |a, x| a.matches(x));
-                    result_type.map_err(|e| format!("Branch type mismatch: {e}"))
+                    result_type.with_context("Enum matching branch type mismatch: ".to_string())
                 }
             } else {
                 Err(format!("Enum matching requires an enum, got {value_type}"))

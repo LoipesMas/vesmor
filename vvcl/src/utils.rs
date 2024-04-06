@@ -81,3 +81,16 @@ pub fn expr_option_to_enum(body: Option<Expr>) -> Expr {
 pub fn wrap_in_span(input: &str) -> LocatedSpan<&str, RecursiveInfo> {
     LocatedSpan::new_extra(input, RecursiveInfo::new())
 }
+
+pub trait ErrWithContext: Sized {
+    fn with_context(self, ctx: String) -> Self;
+}
+
+impl<T> ErrWithContext for Result<T, String> {
+    fn with_context(self, ctx: String) -> Self {
+        match self {
+            Ok(_) => self,
+            Err(s) => Err(ctx + &s),
+        }
+    }
+}
