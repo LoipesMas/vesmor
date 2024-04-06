@@ -22,6 +22,6 @@ takes_string = (a: String) -> String {
     a
 };
 
-main = (a: Bool, b: Int) -> List<String> {
-    list_map([b,5, 1345645], int_to_str)
+main = (a: Bool, b: Int) -> Option<String> {
+    list_get(["ab"], 0)
 };

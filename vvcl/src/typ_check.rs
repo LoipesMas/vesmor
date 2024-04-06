@@ -551,37 +551,50 @@ pub fn check(
                             if let Expr::Value(ref i) = *fc.function {
                                 // TODO: this is a HACK for list_map typing
                                 // TODO: do something similar for list_get ;]
-                                if i.0 == "list_map" {
-                                    let first_arg_type = &call_arg_types[0];
-                                    let second_arg_type = &call_arg_types[1];
-                                    let _ = first_arg_type.matches(&args[0])?;
-                                    let _ = second_arg_type.matches(&args[1])?;
-                                    if let Type::Function {
-                                        args: mapping_fun_args,
-                                        return_type: mapping_fun_ret_type,
-                                    } = second_arg_type
-                                    {
-                                        let mapping_input_type = &mapping_fun_args[0];
-                                        if let Type::Simple { name, subtype } = first_arg_type {
-                                            let subtype = subtype.as_deref().unwrap();
-                                            if mapping_input_type.matches(subtype).is_err() {
-                                                return Err(format!(
-                                                    "Mapping function expected to take type {subtype} but takes {mapping_input_type}"
-                                                ));
-                                            }
+                                match i.0.as_str() {
+                                    "list_map" => {
+                                        let first_arg_type = &call_arg_types[0];
+                                        let second_arg_type = &call_arg_types[1];
+                                        let _ = first_arg_type.matches(&args[0])?;
+                                        let _ = second_arg_type.matches(&args[1])?;
+                                        if let Type::Function {
+                                            args: mapping_fun_args,
+                                            return_type: mapping_fun_ret_type,
+                                        } = second_arg_type
+                                        {
+                                            let mapping_input_type = &mapping_fun_args[0];
+                                            if let Type::Simple { name, subtype } = first_arg_type {
+                                                let subtype = subtype.as_deref().unwrap();
+                                                if mapping_input_type.matches(subtype).is_err() {
+                                                    return Err(format!(
+                                                        "Mapping function expected to take type {subtype} but takes {mapping_input_type}"
+                                                    ));
+                                                }
 
-                                            Ok(Type::Simple {
-                                                name: name.clone(),
-                                                subtype: Some(mapping_fun_ret_type.clone()),
-                                            })
+                                                Ok(Type::Simple {
+                                                    name: name.clone(),
+                                                    subtype: Some(mapping_fun_ret_type.clone()),
+                                                })
+                                            } else {
+                                                unreachable!("or so I thought")
+                                            }
                                         } else {
                                             unreachable!("or so I thought")
                                         }
-                                    } else {
-                                        unreachable!("or so I thought")
                                     }
-                                } else {
-                                    Ok(*return_type)
+                                    "list_get" => {
+                                        let first_arg_type = &call_arg_types[0];
+                                        let second_arg_type = &call_arg_types[1];
+                                        let _ = first_arg_type.matches(&args[0])?;
+                                        let _ = second_arg_type.matches(&args[1])?;
+                                        if let Type::Simple { name, subtype } = first_arg_type {
+                                            let subtype = subtype.as_ref().unwrap();
+                                            Ok(concrete_option_type(*subtype.clone()))
+                                        } else {
+                                            unreachable!("or so I thought")
+                                        }
+                                    }
+                                    _ => Ok(*return_type),
                                 }
                             } else {
                                 Ok(*return_type)
