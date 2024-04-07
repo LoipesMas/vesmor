@@ -1,6 +1,7 @@
 use crate::ast::{
-    BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern, EnumVariant,
-    Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess, RecordAccessError,
+    ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
+    EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+    RecordAccessError,
 };
 use crate::utils::{bool_to_enum, enum_to_bool, map_from_defs};
 use std::collections::HashMap;
@@ -79,7 +80,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                 panic!("Tried to call non-function: {:?}", fc.function)
             } else if let Expr::Value(ref v) = *fc.function {
                 if let Some(f) = combined_scope.get(v) {
-                    f.clone()
+                    brl(f)
                 } else {
                     *fc.function.clone()
                 }
@@ -96,14 +97,46 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &Expr)
                     e.clone()
                 } else {
                     let mut inner_scope = HashMap::new();
-                    for (i, arg_expr) in reduced_args.iter().enumerate() {
-                        if let Some(target_arg) = fun.arguments.get(i) {
-                            inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
-                        } else {
-                            panic!("Tried to call function with more arguments that expected!",)
+                    match reduced_args.len().cmp(&fun.arguments.len()) {
+                        std::cmp::Ordering::Greater => {
+                            panic!("Called function with too many arguments")
+                        }
+                        std::cmp::Ordering::Equal => {
+                            for (i, arg_expr) in reduced_args.iter().enumerate() {
+                                let target_arg = fun
+                                    .arguments
+                                    .get(i)
+                                    .expect("Compared length of args already");
+                                inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
+                            }
+                            br(&HashMap::new(), &br(&inner_scope, &fun.body))
+                        }
+                        std::cmp::Ordering::Less => {
+                            // partial application
+                            let remaining_arguments = fun
+                                .arguments
+                                .iter()
+                                .skip(reduced_args.len())
+                                .cloned()
+                                .collect::<Vec<_>>();
+                            let inner_args_exprs = reduced_args
+                                .into_iter()
+                                .chain(
+                                    remaining_arguments
+                                        .iter()
+                                        .map(|ad| Expr::Value(ad.name.clone())),
+                                )
+                                .collect::<Vec<_>>();
+                            Expr::Function(Function {
+                                arguments: remaining_arguments,
+                                return_type: fun.return_type.clone(),
+                                body: Box::new(Expr::FunctionCall(FunctionCall {
+                                    function: Box::new(Expr::Function(fun)),
+                                    arguments: inner_args_exprs,
+                                })),
+                            })
                         }
                     }
-                    br(&HashMap::new(), &br(&inner_scope, &fun.body))
                 }
             } else if function.is_realized() {
                 panic!("Tried to call non-function: {:?}", function);

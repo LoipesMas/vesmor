@@ -22,6 +22,10 @@ takes_string = (a: String) -> String {
     a
 };
 
-main = (a: Bool, b: Int) -> Option<String> {
-    list_get(["ab"], 0)
+add = (a: Int, b: Int) -> Int (a+b);
+
+u = user("a");
+
+main = (a: Bool, b: Int) -> List<Int> {
+    list_map([1,2,b], add(10))
 };

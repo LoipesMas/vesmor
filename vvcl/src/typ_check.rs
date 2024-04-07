@@ -569,17 +569,15 @@ pub fn check(
                     std::cmp::Ordering::Greater => {
                         Err("Called function with too many arguments".to_string())
                     }
-                    std::cmp::Ordering::Less => {
-                        // TODO: I think we should create new temporary function `Expr` that takes
-                        // remaining arguments and in the body calls the target function
-                        Err("Partial application not implemented yet!".to_string())
-                    }
+                    std::cmp::Ordering::Less => Ok(Type::Function {
+                        args: args.into_iter().skip(call_arg_types.len()).collect(),
+                        return_type,
+                    }),
                     std::cmp::Ordering::Equal => {
                         if args.iter().any(|a| a.has_holes()) {
                             // TODO: this is a HACK for builtin functions
                             if let Expr::Value(ref i) = *fc.function {
                                 // TODO: this is a HACK for list_map typing
-                                // TODO: do something similar for list_get ;]
                                 match i.0.as_str() {
                                     "list_map" => {
                                         let first_arg_type = &call_arg_types[0];
@@ -616,7 +614,7 @@ pub fn check(
                                         let second_arg_type = &call_arg_types[1];
                                         let _ = first_arg_type.matches(&args[0])?;
                                         let _ = second_arg_type.matches(&args[1])?;
-                                        if let Type::Simple { name, subtype } = first_arg_type {
+                                        if let Type::Simple { name: _, subtype } = first_arg_type {
                                             let subtype = subtype.as_ref().unwrap();
                                             Ok(concrete_option_type(*subtype.clone()))
                                         } else {

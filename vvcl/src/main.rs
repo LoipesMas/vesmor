@@ -75,23 +75,21 @@ fn main() {
         })
         .collect();
     let mut global_scope = default_global_scope();
-    global_scope.extend(utils::map_from_defs(reduced_defs));
+    global_scope.extend(utils::map_from_defs(reduced_defs.clone()));
 
     // debug
     let main_body = global_scope.get(&ident("main")).unwrap();
     dbg!(main_body);
 
-    // // 2nd pass of "compilation"
-    // // with global scope
-    // for f in funs {
-    //     let reduced_f = eval::beta_reduction(
-    //         &global_scope,
-    //         &HashMap::new(),
-    //         &ast::Expr::Function(f.clone()),
-    //     );
-    //     global_scope.insert(f.name.clone(), reduced_f);
+    // 2nd pass of "compilation"
+    // with global scope
+    // should make stuff faster
+    // but disabled for now to catch bugs
+    // for d in reduced_defs {
+    //     let reduced_f = eval::beta_reduction(&global_scope, &HashMap::new(), &d.body);
+    //     global_scope.insert(d.name.clone(), reduced_f);
     // }
-    //
+
     // debug
     let main_body = global_scope.get(&ident("main")).unwrap();
     dbg!(main_body);
