@@ -71,7 +71,7 @@ fn main() {
     let reduced_defs: Vec<Definition> = exprs
         .iter()
         .map(|d| Definition {
-            body: eval::beta_reduction(&HashMap::new(), &HashMap::new(), d.body.clone()),
+            body: eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),
             name: d.name.clone(),
         })
         .collect();

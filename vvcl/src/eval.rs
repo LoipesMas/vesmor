@@ -28,7 +28,7 @@ impl Scope for TwoScopes<'_> {
 // so we wouldn't have to clone so much
 // UPD: I think `&Expr` is faster than `Expr`
 // maybe Cow would be better here?
-pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr) -> RExpr {
+pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &RExpr) -> RExpr {
     let br = |s, e| beta_reduction(global_scope, s, e);
     let brl = |e| beta_reduction(global_scope, local_scope, e);
     let combined_scope = (global_scope, local_scope);
@@ -39,12 +39,12 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
                 .definitions
                 .iter()
                 .map(|d| Definition {
-                    body: brl(d.body.clone()),
+                    body: brl(&d.body),
                     name: d.name.clone(),
                 })
                 .collect();
             new_scope.extend(map_from_defs(reduced_defs.clone()));
-            let new_expr = br(&new_scope, b.expr.clone());
+            let new_expr = br(&new_scope, &b.expr);
             if new_expr.is_realized() {
                 new_expr
             } else {
@@ -57,11 +57,11 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
             }
         }
         Expr::Value(v) => {
-            if let Some(e) = combined_scope.get(&v) {
-                brl(e.clone())
+            if let Some(e) = combined_scope.get(v) {
+                brl(e)
             } else {
                 // println!("variable not in scope: {}", v.0);
-                e
+                e.clone()
             }
         }
         Expr::BinaryOperation(BinaryOperation {
@@ -70,13 +70,13 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
             right,
         }) => {
             let bo = BinaryOperation {
-                left: brl(left.clone()),
+                left: brl(left),
                 operator: *operator,
-                right: brl(right.clone()),
+                right: brl(right),
             };
-            apply_binary_operation(bo).into()
+            apply_binary_operation(bo)
         }
-        Expr::Function(_) => e.into(),
+        Expr::Function(_) => e.clone(),
         Expr::FunctionCall(fc) => {
             let function = if let Expr::Function(_) = *fc.function {
                 fc.function.clone()
@@ -84,15 +84,15 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
                 panic!("Tried to call non-function: {:?}", fc.function)
             } else if let Expr::Value(ref v) = *fc.function {
                 if let Some(f) = combined_scope.get(v) {
-                    brl(f.clone())
+                    brl(f)
                 } else {
                     fc.function.clone()
                 }
             } else {
-                brl(fc.function.clone())
+                brl(&fc.function)
             };
             if let Expr::Function(fun) = function.borrow() {
-                let reduced_args = Vec::from_iter(fc.arguments.iter().map(|a| brl(a.clone())));
+                let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
                 if reduced_args.is_empty() {
                     println!("not reducing FunctionCall, because no arguments passed!");
                     e.clone()
@@ -117,7 +117,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
                                     .expect("Compared length of args already");
                                 inner_scope.insert(target_arg.name.clone(), arg_expr.clone());
                             }
-                            br(&HashMap::new(), br(&inner_scope, fun.body.clone()))
+                            br(&HashMap::new(), &br(&inner_scope, &fun.body))
                         }
                         std::cmp::Ordering::Less => {
                             // partial application
@@ -165,11 +165,11 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
             } else {
                 let mut rec = rec.clone();
                 for expr in rec.update.values_mut() {
-                    let reduced = beta_reduction(global_scope, local_scope, expr.clone());
+                    let reduced = beta_reduction(global_scope, local_scope, expr);
                     *expr = reduced;
                 }
                 if let Some(ref from) = rec.base {
-                    let mut from = brl(from.clone());
+                    let mut from = brl(from);
                     if from.is_realized() {
                         if let Expr::Record(mut from) = Rc::<Expr>::make_mut(&mut from).clone() {
                             debug_assert!(from.base.is_none(), "Should be realized!");
@@ -192,7 +192,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
             }
         }
         Expr::RecordAccess(ra) => {
-            let record = brl(ra.record.clone());
+            let record = brl(&ra.record);
             if let Expr::Record(rec) = record.borrow() {
                 match rec.get(&ra.member) {
                     Ok(v) => v,
@@ -214,18 +214,18 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: RExpr)
                 .into()
             }
         }
-        Expr::List(exprs) => Expr::List(exprs.iter().map(|v| brl(v.clone())).collect()).into(),
+        Expr::List(exprs) => Expr::List(exprs.iter().map(brl).collect()).into(),
         Expr::EnumVariant(EnumVariant { variant, enu, body }) => Expr::EnumVariant(EnumVariant {
             enu: enu.clone(),
             variant: variant.clone(),
-            body: body.clone().map(brl),
+            body: body.as_ref().map(brl),
         })
         .into(),
         Expr::EnumMatching(em) => {
-            let value = brl(em.value.clone());
+            let value = brl(&em.value);
             if value.deref().is_realized() {
                 if let Expr::EnumVariant(ev) = value.borrow() {
-                    if let Some(branch) = em.branches.iter().find(|branch| branch.matches(&ev)) {
+                    if let Some(branch) = em.branches.iter().find(|branch| branch.matches(ev)) {
                         eval_enum_match_branch(global_scope, local_scope, ev.clone(), branch)
                     } else {
                         panic!("None of the branches matched {ev:?}")
@@ -261,7 +261,7 @@ fn eval_enum_match_branch(
                 definitions: vec![definition],
                 expr: branch.expr.clone(),
             });
-            beta_reduction(global_scope, local_scope, block.into())
+            beta_reduction(global_scope, local_scope, &block.into())
         }
         EnumPattern::Variant { variant: _, bind } => {
             if let Some(bind_ident) = &bind {
@@ -275,14 +275,14 @@ fn eval_enum_match_branch(
                         definitions: vec![definition],
                         expr: branch.expr.clone(),
                     });
-                    beta_reduction(global_scope, local_scope, block.into())
+                    beta_reduction(global_scope, local_scope, &block.into())
                 } else {
                     // tried to bind, failed
                     panic!("Tried to bind enum body, but enum haven't got one. {ev:?}")
                 }
             } else if ev.body.is_none() {
                 // nothing to bind, didn't try
-                beta_reduction(global_scope, local_scope, branch.expr.clone())
+                beta_reduction(global_scope, local_scope, &branch.expr)
             } else {
                 // tried not to bind, failed
                 panic!("Enum body was not bound {ev:?}")
