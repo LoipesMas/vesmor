@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     cell::RefCell,
     collections::{HashMap, HashSet},
     str::FromStr,
@@ -84,7 +85,7 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
             &global_scope_types,
             &HashMap::new(),
             &type_definitions,
-            &def.body,
+            def.body.clone(),
         )
         .map_err(|e| format!("In definition of {}: {}", def.name, e))?;
         global_scope_types.insert(def.name.clone(), typ);
@@ -129,7 +130,7 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
 fn rec_to_vec2(record: vvcl::ast::Record) -> Vec2 {
     let x = record.get(&ident("x")).unwrap();
     let y = record.get(&ident("y")).unwrap();
-    if let (vvcl::ast::Expr::Float(x), vvcl::ast::Expr::Float(y)) = (x, y) {
+    if let (vvcl::ast::Expr::Float(x), vvcl::ast::Expr::Float(y)) = (x.borrow(), y.borrow()) {
         pt2(*x as f32, *y as f32)
     } else {
         panic!("expected <x: Float; y: Float;>, got {record:?}");
@@ -148,7 +149,7 @@ fn command_from_record(ev: &vvcl::ast::EnumVariant) -> Command {
                     let start_rec = record.get(&ident("start")).unwrap();
                     let end_rec = record.get(&ident("end")).unwrap();
                     if let (vvcl::ast::Expr::Record(start_rec), vvcl::ast::Expr::Record(end_rec)) =
-                        (start_rec, end_rec)
+                        (start_rec.borrow(), end_rec.borrow())
                     {
                         let start = rec_to_vec2(start_rec.clone());
                         let end = rec_to_vec2(end_rec.clone());
@@ -180,9 +181,9 @@ pub struct Model {
 
 struct Runtime {
     global_scope: vvcl::eval::ScopeMap,
-    game_state: vvcl::ast::Expr,
-    update_function: vvcl::ast::Expr,
-    event_function: vvcl::ast::Expr,
+    game_state: vvcl::ast::RExpr,
+    update_function: vvcl::ast::RExpr,
+    event_function: vvcl::ast::RExpr,
 }
 
 macro_rules! keys {
@@ -258,7 +259,7 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
             &global_scope_types,
             &HashMap::new(),
             &type_definitions,
-            &def.body,
+            def.body.clone(),
         )
         .unwrap();
         global_scope_types.insert(def.name.clone(), typ);
@@ -277,18 +278,20 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
     global_scope.extend(vvcl::utils::map_from_defs(reduced_defs));
 
     let game_state = global_scope.get(&ident("init")).unwrap().clone();
-    let update_function =
-        if let vvcl::ast::Expr::Function(f) = global_scope.get(&ident("update_handler")).unwrap() {
-            *f.body.clone()
-        } else {
-            panic!("`update_handler` should have been a function.")
-        };
-    let event_function =
-        if let vvcl::ast::Expr::Function(f) = global_scope.get(&ident("event_handler")).unwrap() {
-            *f.body.clone()
-        } else {
-            panic!("`event_handler` should have been a function.")
-        };
+    let update_function = if let vvcl::ast::Expr::Function(f) =
+        global_scope.get(&ident("update_handler")).unwrap().borrow()
+    {
+        f.body.clone()
+    } else {
+        panic!("`update_handler` should have been a function.")
+    };
+    let event_function = if let vvcl::ast::Expr::Function(f) =
+        global_scope.get(&ident("event_handler")).unwrap().borrow()
+    {
+        f.body.clone()
+    } else {
+        panic!("`event_handler` should have been a function.")
+    };
 
     Runtime {
         global_scope,
@@ -365,13 +368,14 @@ pub fn model(app: &App) -> Model {
     })
 }
 
-fn extract_state_and_commands(result: vvcl::ast::Expr) -> (vvcl::ast::Expr, Vec<Command>) {
-    if let vvcl::ast::Expr::Record(r) = result {
+fn extract_state_and_commands(result: vvcl::ast::RExpr) -> (vvcl::ast::RExpr, Vec<Command>) {
+    if let vvcl::ast::Expr::Record(r) = result.borrow() {
         let game_state = r.get(&ident("game")).unwrap().clone();
-        let commands = if let vvcl::ast::Expr::List(l) = r.get(&ident("commands")).unwrap() {
+        let commands = if let vvcl::ast::Expr::List(l) = r.get(&ident("commands")).unwrap().borrow()
+        {
             let mut ret = vec![];
             for command in l {
-                if let vvcl::ast::Expr::EnumVariant(ev) = command {
+                if let vvcl::ast::Expr::EnumVariant(ev) = command.borrow() {
                     ret.push(command_from_record(ev));
                 } else {
                     panic!("expected Enum Variant of Command, got {command:?}")
@@ -402,7 +406,7 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
     let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
     let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(ident("delta"), vvcl::ast::Expr::Float(delta));
+    local_scope.insert(ident("delta"), vvcl::ast::Expr::Float(delta).into());
     local_scope.insert(ident("game"), model.runtime.game_state.clone());
 
     let updated = vvcl::eval::beta_reduction(

@@ -31,3 +31,11 @@ pub async fn update_source_code(code: &str, hot_reload: bool) -> String {
         Err(e) => format!("Failed update: {e}"),
     }
 }
+
+#[wasm_bindgen]
+pub async fn check_code(code: &str) -> String {
+    match check_source_code(code) {
+        Ok(()) => "Code is correct!".to_string(),
+        Err(e) => format!("Error in code: {e}"),
+    }
+}
