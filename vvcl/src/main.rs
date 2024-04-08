@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::{collections::HashMap, fs, time::Instant};
 
 mod ast;
@@ -58,7 +59,7 @@ fn main() {
             &global_scope_types,
             &HashMap::new(),
             &type_definitions,
-            &def.body
+            def.body.clone()
         ))
         .unwrap();
         global_scope_types.insert(def.name.clone(), typ);
@@ -70,7 +71,7 @@ fn main() {
     let reduced_defs: Vec<Definition> = exprs
         .iter()
         .map(|d| Definition {
-            body: eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),
+            body: eval::beta_reduction(&HashMap::new(), &HashMap::new(), d.body.clone()),
             name: d.name.clone(),
         })
         .collect();
@@ -86,7 +87,7 @@ fn main() {
     // should make stuff faster
     // but disabled for now to catch bugs
     // for d in reduced_defs {
-    //     let reduced_f = eval::beta_reduction(&global_scope, &HashMap::new(), &d.body);
+    //     let reduced_f = eval::beta_reduction(&global_scope, &HashMap::new(), d.body);
     //     global_scope.insert(d.name.clone(), reduced_f);
     // }
 
@@ -98,14 +99,14 @@ fn main() {
 
     let mut local_scope = HashMap::new();
     local_scope.insert(ident("a"), utils::bool_to_enum(true));
-    local_scope.insert(ident("b"), int_e(10));
+    local_scope.insert(ident("b"), int_e(10).into());
 
     let t0 = Instant::now();
 
-    let main_body = if let ast::Expr::Function(f) = main_body {
-        &*f.body
+    let main_body = if let ast::Expr::Function(f) = main_body.borrow() {
+        f.body.clone()
     } else {
-        main_body
+        main_body.clone()
     };
 
     let res = eval::beta_reduction(&global_scope, &local_scope, main_body);

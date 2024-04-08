@@ -1,15 +1,15 @@
-use std::collections::HashMap;
+use std::{borrow::Borrow, collections::HashMap};
 
 use nom_locate::LocatedSpan;
 use nom_recursive::RecursiveInfo;
 
 use crate::{
-    ast::{Definition, EnumVariant, Expr, Ident},
+    ast::{Definition, EnumVariant, Expr, Ident, RExpr},
     builtin_functions::scope_with_builtin_functions,
     eval::ScopeMap,
 };
 
-pub fn map_from_defs(defs: Vec<Definition>) -> HashMap<Ident, Expr> {
+pub fn map_from_defs(defs: Vec<Definition>) -> HashMap<Ident, RExpr> {
     // TODO: unfortunately this allows for shadowing ;//
     // need to figure out a different way
     defs.into_iter().map(|d| (d.name, d.body)).collect()
@@ -27,10 +27,10 @@ pub fn default_global_scope() -> ScopeMap {
 
 pub fn get_function_value(expr: Expr) -> Result<String, ()> {
     if let Expr::Function(fun) = expr {
-        match *fun.body {
+        match fun.body.borrow() {
             Expr::Int(v) => Ok(v.to_string()),
             Expr::Float(v) => Ok(v.to_string()),
-            Expr::String(v) => Ok(v),
+            Expr::String(v) => Ok(v.to_owned()),
             Expr::Record(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
             Expr::List(v) if fun.body.is_realized() => Ok(format!("{:?}", v)),
             Expr::EnumVariant(v) if fun.body.is_realized() => Ok(format!("{v:?}")),
@@ -44,7 +44,7 @@ pub fn get_function_value(expr: Expr) -> Result<String, ()> {
     }
 }
 
-pub fn bool_to_enum(v: bool) -> Expr {
+pub fn bool_to_enum(v: bool) -> RExpr {
     let variant_str = match v {
         true => "True",
         false => "False",
@@ -65,15 +65,16 @@ pub fn enum_to_bool(ev: &EnumVariant) -> bool {
     }
 }
 
-pub fn enum_variant(enu: &str, variant: &str, body: Option<Expr>) -> Expr {
+pub fn enum_variant(enu: &str, variant: &str, body: Option<RExpr>) -> RExpr {
     Expr::EnumVariant(EnumVariant {
         enu: ident(enu),
         variant: ident(variant),
-        body: body.map(Box::new),
+        body,
     })
+    .into()
 }
 
-pub fn expr_option_to_enum(body: Option<Expr>) -> Expr {
+pub fn expr_option_to_enum(body: Option<RExpr>) -> RExpr {
     let variant_str = if body.is_some() { "Some" } else { "None" };
     enum_variant("Option", variant_str, body)
 }

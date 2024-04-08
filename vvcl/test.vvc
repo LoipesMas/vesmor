@@ -26,6 +26,10 @@ add = (a: Int, b: Int) -> Int (a+b);
 
 u = user("a");
 
-main = (a: Bool, b: Int) -> List<Int> {
-    list_map([1,2,b], add(10))
+main = (a: Bool, b: Int) -> User {
+    thirty_two = add(30,2);
+    added = add(10,b);
+    tripled = triple(added);
+    str = int_to_str(tripled);
+    u(str)
 };

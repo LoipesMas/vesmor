@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
+use std::{borrow::Borrow, collections::HashMap, rc::Rc};
 
 use crate::{
-    ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall, Ident},
+    ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall, Ident, RExpr},
     eval::ScopeMap,
     typ_check::{
-        generic_list_type_name, generic_option_type_name, type_hole_name, FunctionTypeName,
-        NormalTypeName, Type, TypeName,
+        generic_list_type_name, generic_option_type_name, FunctionTypeName, NormalTypeName, Type,
+        TypeName,
     },
     utils::{expr_option_to_enum, ident},
 };
@@ -33,16 +33,16 @@ fn string_type_name() -> TypeName {
     })
 }
 
-fn double() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn double() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         if let Some(a) = local_scope.get(&ident("a")) {
-            if let Expr::Int(a) = a {
-                Expr::Int(a * 2)
+            if let Expr::Int(a) = **a {
+                Expr::Int(a * 2).into()
             } else {
                 panic!("argument a is not `Expr::Int`!")
             }
         } else {
-            Expr::BuiltInFunction(BuiltInFunction { body: &body })
+            Expr::BuiltInFunction(BuiltInFunction { body: &body }).into()
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -52,20 +52,21 @@ fn double() -> Expr {
             typ: int_type_name(),
         }],
         return_type: int_type_name(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
-fn int_to_str() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn int_to_str() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         if let Some(a) = local_scope.get(&ident("a")) {
-            if let Expr::Int(a) = a {
-                Expr::String(a.to_string())
+            if let Expr::Int(a) = **a {
+                Expr::String(a.to_string()).into()
             } else {
                 panic!("Expected `Int`, got {:?}", a)
             }
         } else {
-            Expr::BuiltInFunction(BuiltInFunction { body: &body })
+            Expr::BuiltInFunction(BuiltInFunction { body: &body }).into()
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -75,22 +76,24 @@ fn int_to_str() -> Expr {
             typ: int_type_name(),
         }],
         return_type: string_type_name(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
-fn list_map() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn list_map() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         let list = local_scope.get(&ident("list"));
         let function = local_scope.get(&ident("function"));
-        match (list, function) {
+        match (list.map(|v| v.borrow()), function.borrow()) {
             (Some(Expr::List(list)), Some(function)) => Expr::List(
                 list.iter()
                     .map(|v| FunctionCall {
-                        function: Box::new(function.clone()),
+                        function: (*function).clone(),
                         arguments: vec![v.clone()],
                     })
                     .map(Expr::FunctionCall)
+                    .map(Rc::new)
                     .collect(),
             ),
             (Some(a), Some(b)) if a.is_realized() && b.is_realized() => {
@@ -98,6 +101,7 @@ fn list_map() -> Expr {
             }
             _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
         }
+        .into()
     }
     let bif = BuiltInFunction { body: &body };
     Expr::Function(Function {
@@ -133,22 +137,23 @@ fn list_map() -> Expr {
                 subtype: None,
             })),
         }),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
-fn list_get() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn list_get() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         let list = local_scope.get(&ident("list"));
         let idx = local_scope.get(&ident("idx"));
-        match (list, idx) {
+        match (list.map(|v| v.borrow()), idx.map(|v| v.borrow())) {
             (Some(Expr::List(list)), Some(Expr::Int(idx))) => {
                 expr_option_to_enum(list.get(*idx as usize).cloned())
             }
             (Some(a), Some(b)) if a.is_realized() && b.is_realized() => {
                 panic!("Expected List and Int, got {:?} and {:?}", a, b)
             }
-            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }).into(),
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -164,19 +169,20 @@ fn list_get() -> Expr {
             },
         ],
         return_type: generic_option_type_name(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
-fn list_size() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn list_size() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         let list = local_scope.get(&ident("list"));
-        match list {
-            Some(Expr::List(list)) => Expr::Int(list.len() as i64),
+        match list.map(|v| v.borrow()) {
+            Some(Expr::List(list)) => Expr::Int(list.len() as i64).into(),
             Some(a) if a.is_realized() => {
                 panic!("Expected List, got {:?}", a)
             }
-            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }).into(),
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -186,19 +192,20 @@ fn list_size() -> Expr {
             typ: generic_list_type_name(),
         }],
         return_type: int_type_name(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
-fn sin() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn sin() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         let x = local_scope.get(&ident("x"));
-        match x {
-            Some(Expr::Float(x)) => Expr::Float(x.sin()),
+        match x.map(|v| v.borrow()) {
+            Some(Expr::Float(x)) => Expr::Float(x.sin()).into(),
             Some(a) if a.is_realized() => {
                 panic!("Expected List, got {:?}", a)
             }
-            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }).into(),
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -208,19 +215,20 @@ fn sin() -> Expr {
             typ: float_type_name(),
         }],
         return_type: float_type_name(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
-fn cos() -> Expr {
-    fn body(local_scope: &ScopeMap) -> Expr {
+fn cos() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
         let x = local_scope.get(&ident("x"));
-        match x {
-            Some(Expr::Float(x)) => Expr::Float(x.cos()),
+        match x.map(|v| v.borrow()) {
+            Some(Expr::Float(x)) => Expr::Float(x.cos()).into(),
             Some(a) if a.is_realized() => {
                 panic!("Expected List, got {:?}", a)
             }
-            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }),
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }).into(),
         }
     }
     let bif = BuiltInFunction { body: &body };
@@ -230,8 +238,9 @@ fn cos() -> Expr {
             typ: float_type_name(),
         }],
         return_type: float_type_name(),
-        body: Box::new(Expr::BuiltInFunction(bif)),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
     })
+    .into()
 }
 
 pub fn scope_with_builtin_functions() -> ScopeMap {

@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::rc::Rc;
+
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while},
@@ -15,7 +17,7 @@ use nom_recursive::{recursive_parser, RecursiveInfo};
 use crate::{
     ast::{
         ArgDef, BinaryOperation, BinaryOperator, Block, Definition, EnumMatching, EnumPattern,
-        EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, Record, RecordAccess,
+        EnumVariant, Expr, Function, FunctionCall, Ident, MatchBranch, RExpr, Record, RecordAccess,
         TypeDef,
     },
     typ_check::{EnumTypeName, FunctionTypeName, RecordTypeName, TypeName},
@@ -89,21 +91,15 @@ fn arg_def(input: Span) -> PResult<ArgDef> {
 }
 
 fn definition(input: Span) -> PResult<Definition> {
-    let (input, (name, body)) = separated_pair(ident, tag("="), expr)(input)?;
+    let (input, (name, body)) = separated_pair(ident, tag("="), rexpr)(input)?;
     let (input, _) = tag(";")(input)?;
     Ok((input, Definition { name, body }))
 }
 
 fn block(input: Span) -> PResult<Block> {
     let (input, (definitions, expr)) =
-        delimited(tag("{"), pair(many0(definition), expr), tag("}"))(input)?;
-    Ok((
-        input,
-        Block {
-            definitions,
-            expr: Box::new(expr),
-        },
-    ))
+        delimited(tag("{"), pair(many0(definition), rexpr), tag("}"))(input)?;
+    Ok((input, Block { definitions, expr }))
 }
 
 fn block_expr(input: Span) -> PResult<Expr> {
@@ -159,11 +155,11 @@ fn binary_operator(input: Span) -> PResult<BinaryOperator> {
 
 fn binary_operation(input: Span) -> PResult<Expr> {
     let (input, (left, operator, right)) =
-        delimited(tag("("), tuple((expr, binary_operator, expr)), tag(")"))(input)?;
+        delimited(tag("("), tuple((rexpr, binary_operator, rexpr)), tag(")"))(input)?;
     let bo = BinaryOperation {
-        left: Box::new(left),
+        left,
         operator,
-        right: Box::new(right),
+        right,
     };
     Ok((input, Expr::BinaryOperation(bo)))
 }
@@ -183,8 +179,8 @@ fn string_literal_expr(input: Span) -> PResult<Expr> {
 fn function_call(input: Span) -> PResult<FunctionCall> {
     map(
         pair(
-            map(expr, Box::new),
-            delimited(tag("("), separated_list0(tag(","), expr), tag(")")),
+            rexpr,
+            delimited(tag("("), separated_list0(tag(","), rexpr), tag(")")),
         ),
         |(function, arguments)| FunctionCall {
             function,
@@ -200,13 +196,13 @@ fn function_call_expr(input: Span) -> PResult<Expr> {
 fn record(input: Span) -> PResult<Record> {
     let (input, (from, definitions)) = delimited(
         tag("<"),
-        pair(opt(terminated(expr, tag("|"))), many0(definition)),
+        pair(opt(terminated(rexpr, tag("|"))), many0(definition)),
         tag(">"),
     )(input)?;
     Ok((
         input,
         Record {
-            base: from.map(Box::new),
+            base: from,
             update: map_from_defs(definitions),
         },
     ))
@@ -218,11 +214,8 @@ fn record_expr(input: Span) -> PResult<Expr> {
 
 fn record_access(input: Span) -> PResult<RecordAccess> {
     map(
-        preceded(tag("@"), separated_pair(expr, tag("."), ident)),
-        |(record, member)| RecordAccess {
-            record: Box::new(record),
-            member,
-        },
+        preceded(tag("@"), separated_pair(rexpr, tag("."), ident)),
+        |(record, member)| RecordAccess { record, member },
     )(input)
 }
 
@@ -234,7 +227,7 @@ fn list_expr(input: Span) -> PResult<Expr> {
     map(
         delimited(
             tag("["),
-            terminated(separated_list0(tag(","), expr), opt(tag(","))),
+            terminated(separated_list0(tag(","), rexpr), opt(tag(","))),
             tag("]"),
         ),
         Expr::List,
@@ -243,14 +236,12 @@ fn list_expr(input: Span) -> PResult<Expr> {
 
 fn enum_variant_constructor(input: Span) -> PResult<Expr> {
     map(
-        separated_pair(separated_pair(ident, tag("::"), ident), tag("`"), opt(expr)),
-        |((enu, variant), body)| {
-            Expr::EnumVariant(EnumVariant {
-                enu,
-                variant,
-                body: body.map(Box::new),
-            })
-        },
+        separated_pair(
+            separated_pair(ident, tag("::"), ident),
+            tag("`"),
+            opt(rexpr),
+        ),
+        |((enu, variant), body)| Expr::EnumVariant(EnumVariant { enu, variant, body }),
     )(input)
 }
 
@@ -268,25 +259,17 @@ fn enum_matching_branch(input: Span) -> PResult<MatchBranch> {
     map(
         delimited(
             tag("|"),
-            separated_pair(enum_pattern, tag("=>"), expr),
+            separated_pair(enum_pattern, tag("=>"), rexpr),
             tag(";"),
         ),
-        |(pattern, expr)| MatchBranch {
-            pattern,
-            expr: Box::new(expr),
-        },
+        |(pattern, expr)| MatchBranch { pattern, expr },
     )(input)
 }
 
 fn enum_matching_expr(input: Span) -> PResult<Expr> {
     map(
-        preceded(tag("?"), pair(expr, many1(enum_matching_branch))),
-        |(value, branches)| {
-            Expr::EnumMatching(EnumMatching {
-                value: Box::new(value),
-                branches,
-            })
-        },
+        preceded(tag("?"), pair(rexpr, many1(enum_matching_branch))),
+        |(value, branches)| Expr::EnumMatching(EnumMatching { value, branches }),
     )(input)
 }
 
@@ -298,7 +281,7 @@ fn fun(input: Span) -> PResult<Function> {
                 tag("->"),
                 normal_type_name,
             ),
-            map(expr, Box::new),
+            rexpr,
         ),
         |((arguments, return_type), body)| Function {
             arguments,
@@ -328,6 +311,10 @@ pub fn expr(input: Span) -> PResult<Expr> {
         int_expr,
         value_expr,
     ))(input)
+}
+
+pub fn rexpr(input: Span) -> PResult<RExpr> {
+    map(expr, Rc::new)(input)
 }
 
 fn record_definition(input: Span) -> PResult<RecordTypeName> {

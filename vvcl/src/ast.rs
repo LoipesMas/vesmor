@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::eval::ScopeMap;
 use crate::typ_check::TypeName;
@@ -19,12 +20,12 @@ impl std::fmt::Display for Ident {
 #[derive(Debug, Clone)]
 pub struct Definition {
     pub name: Ident,
-    pub body: Expr,
+    pub body: RExpr,
 }
 #[derive(Debug, Clone)]
 pub struct Block {
     pub definitions: Vec<Definition>,
-    pub expr: Box<Expr>,
+    pub expr: Rc<Expr>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -72,9 +73,9 @@ impl BinaryOperator {
 
 #[derive(Debug, Clone)]
 pub struct BinaryOperation {
-    pub left: Box<Expr>,
+    pub left: Rc<Expr>,
     pub operator: BinaryOperator,
-    pub right: Box<Expr>,
+    pub right: Rc<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -87,11 +88,11 @@ pub struct ArgDef {
 pub struct Function {
     pub arguments: Vec<ArgDef>,
     pub return_type: TypeName,
-    pub body: Box<Expr>,
+    pub body: Rc<Expr>,
 }
 
 // `BuiltInFunction`s only get access to local_scope
-type BuiltInFunctionClosure = dyn Fn(&ScopeMap) -> Expr;
+type BuiltInFunctionClosure = dyn Fn(&ScopeMap) -> RExpr;
 
 #[derive(Clone)]
 pub struct BuiltInFunction {
@@ -106,14 +107,14 @@ impl std::fmt::Debug for BuiltInFunction {
 
 #[derive(Debug, Clone)]
 pub struct FunctionCall {
-    pub function: Box<Expr>,
-    pub arguments: Vec<Expr>,
+    pub function: Rc<Expr>,
+    pub arguments: Vec<RExpr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Record {
-    pub base: Option<Box<Expr>>,
-    pub update: HashMap<Ident, Expr>,
+    pub base: Option<Rc<Expr>>,
+    pub update: HashMap<Ident, RExpr>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -128,14 +129,14 @@ pub enum RecordAccessError {
 
 impl Record {
     pub fn is_realized(&self) -> bool {
-        self.base.is_none() && self.update.values().all(Expr::is_realized)
+        self.base.is_none() && self.update.values().all(|v| v.is_realized())
     }
 
-    pub fn get(&self, ident: &Ident) -> Result<&Expr, RecordAccessError> {
+    pub fn get(&self, ident: &Ident) -> Result<RExpr, RecordAccessError> {
         use RecordAccessError::*;
         if let Some(value) = self.update.get(ident) {
             if value.is_realized() {
-                Ok(value)
+                Ok(value.clone())
             } else {
                 Err(Unrealized)
             }
@@ -155,7 +156,7 @@ impl Record {
 
 #[derive(Debug, Clone)]
 pub struct RecordAccess {
-    pub record: Box<Expr>,
+    pub record: Rc<Expr>,
     pub member: Ident,
 }
 
@@ -163,7 +164,7 @@ pub struct RecordAccess {
 pub struct EnumVariant {
     pub enu: Ident,
     pub variant: Ident,
-    pub body: Option<Box<Expr>>,
+    pub body: Option<Rc<Expr>>,
 }
 
 #[derive(Debug, Clone)]
@@ -175,7 +176,7 @@ pub enum EnumPattern {
 #[derive(Debug, Clone)]
 pub struct MatchBranch {
     pub pattern: EnumPattern,
-    pub expr: Box<Expr>,
+    pub expr: Rc<Expr>,
 }
 
 impl MatchBranch {
@@ -189,7 +190,7 @@ impl MatchBranch {
 
 #[derive(Debug, Clone)]
 pub struct EnumMatching {
-    pub value: Box<Expr>,
+    pub value: Rc<Expr>,
     pub branches: Vec<MatchBranch>,
 }
 
@@ -198,7 +199,7 @@ pub enum Expr {
     Int(i64),
     Float(f64),
     String(String),
-    List(Vec<Expr>),
+    List(Vec<RExpr>),
     Block(Block),
     Value(Ident),
     BinaryOperation(BinaryOperation),
@@ -210,6 +211,8 @@ pub enum Expr {
     EnumVariant(EnumVariant),
     EnumMatching(EnumMatching),
 }
+
+pub type RExpr = Rc<Expr>;
 
 impl Expr {
     /// Returns `true` if the `Expr` is fully known,
@@ -224,7 +227,7 @@ impl Expr {
         use Expr::*;
         match self {
             Expr::Record(r) => r.is_realized(),
-            List(exprs) => exprs.iter().all(Expr::is_realized),
+            List(exprs) => exprs.iter().all(|v| v.is_realized()),
             Expr::EnumVariant(ev) => match &ev.body {
                 Some(body) => body.is_realized(),
                 None => true,

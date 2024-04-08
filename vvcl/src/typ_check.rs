@@ -1,7 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, HashSet},
+};
 
 use crate::{
-    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident},
+    ast::{BinaryOperation, BinaryOperator, EnumPattern, Expr, Ident, RExpr},
     utils::{ident, ErrWithContext},
 };
 
@@ -470,18 +473,18 @@ pub fn check(
     global_scope: &TypeMap,
     local_scope: &TypeMap,
     type_definitions: &TypeMap,
-    expr: &Expr,
+    expr: RExpr,
 ) -> Result<Type, String> {
     let combined_scope = (global_scope, local_scope);
     let c = |e| check(global_scope, local_scope, type_definitions, e);
-    match expr {
+    match expr.borrow() {
         Expr::Int(_) => Ok(Type::simple("Int")),
         Expr::Float(_) => Ok(Type::simple("Float")),
         Expr::String(_) => Ok(Type::simple("String")),
         Expr::List(list) => {
             let types = list
                 .iter()
-                .map(c)
+                .map(|v| c(v.clone()))
                 .collect::<Result<Vec<_>, _>>()
                 .with_context("In list values: ".to_owned())?;
             match &types[..] {
@@ -514,20 +517,20 @@ pub fn check(
             for def in &b.definitions {
                 new_scope.insert(
                     def.name.clone(),
-                    check(global_scope, &new_scope, type_definitions, &def.body)
+                    check(global_scope, &new_scope, type_definitions, def.body.clone())
                         .with_context(format!("In definition of '{}': ", def.name))?,
                 );
             }
-            check(global_scope, &new_scope, type_definitions, &b.expr)
+            check(global_scope, &new_scope, type_definitions, b.expr.clone())
                 .with_context("In block body: ".to_owned())
         }
-        Expr::Value(v) => combined_scope.get(v).cloned().ok_or_else(|| {
+        Expr::Value(v) => combined_scope.get(&v).cloned().ok_or_else(|| {
             format!(
                 "Type for value '{v}' not found! (Probably undefined, possibly type checker error)"
             )
         }),
         Expr::BinaryOperation(bin_opt) => {
-            check_bin_opt(global_scope, local_scope, type_definitions, bin_opt)
+            check_bin_opt(global_scope, local_scope, type_definitions, &bin_opt)
                 .with_context(format!("In binary operation '{:?}': ", bin_opt.operator))
         }
         Expr::Function(f) => {
@@ -543,7 +546,7 @@ pub fn check(
                 args.push(arg_type.clone());
                 new_scope.insert(arg.name.clone(), arg_type);
             }
-            let evaled_type = check(global_scope, &new_scope, type_definitions, &f.body)
+            let evaled_type = check(global_scope, &new_scope, type_definitions, f.body.clone())
                 .with_context("In function body: ".to_owned())?;
             let return_type_type = f.return_type.to_type(type_definitions)?;
             if return_type_type.has_holes() {
@@ -562,9 +565,13 @@ pub fn check(
         }
         Expr::BuiltInFunction(_) => unreachable!("This shouldn't have been checked"),
         Expr::FunctionCall(fc) => {
-            let func_type = c(&fc.function)?;
+            let func_type = c(fc.function.clone())?;
             if let Type::Function { args, return_type } = func_type {
-                let call_arg_types = fc.arguments.iter().map(c).collect::<Result<Vec<_>, _>>()?;
+                let call_arg_types = fc
+                    .arguments
+                    .iter()
+                    .map(|v| c(v.clone()))
+                    .collect::<Result<Vec<_>, _>>()?;
                 match call_arg_types.len().cmp(&args.len()) {
                     std::cmp::Ordering::Greater => {
                         Err("Called function with too many arguments".to_string())
@@ -649,11 +656,11 @@ pub fn check(
             for (k, v) in r.update.iter() {
                 new_types.insert(
                     k.clone(),
-                    c(v).with_context(format!("In record member '{k}': "))?,
+                    c(v.clone()).with_context(format!("In record member '{k}': "))?,
                 );
             }
             if let Some(base) = &r.base {
-                let base_type = c(base)?;
+                let base_type = c(base.clone())?;
                 if let Type::Record(base_r) = base_type {
                     for (k, v) in base_r.iter() {
                         if let Some(new_type) = new_types.insert(k.clone(), v.clone()) {
@@ -675,7 +682,7 @@ pub fn check(
             }
         }
         Expr::RecordAccess(ra) => {
-            let rec_type = c(&ra.record).with_context("In record access: ".to_owned())?;
+            let rec_type = c(ra.record.clone()).with_context("In record access: ".to_owned())?;
             if let Type::Record(ref map) = rec_type {
                 if let Some(t) = map.get(&ra.member) {
                     Ok(t.clone())
@@ -706,10 +713,10 @@ pub fn check(
                                 "Enum variant {}::{} can't have a body, but got type {}",
                                 &ev.enu,
                                 &ev.variant,
-                                c(a)?
+                                c(a.clone())?
                             )),
                             (Some(a), Some(b)) => {
-                                let a_typ = c(a)?;
+                                let a_typ = c(a.clone())?;
                                 let matched = a_typ.matches(b).with_context(format!(
                                     "In body of enum variant {}::{}: ",
                                     ev.enu, ev.variant
@@ -736,7 +743,8 @@ pub fn check(
             }
         }
         Expr::EnumMatching(em) => {
-            let value_type = c(&em.value).with_context("In enum matching value: ".to_owned())?;
+            let value_type =
+                c(em.value.clone()).with_context("In enum matching value: ".to_owned())?;
             if let Type::Enum {
                 ref enu,
                 ref variants,
@@ -754,7 +762,7 @@ pub fn check(
                                     return Err(format!("'{enu}::{variant}' was already covered!"));
                                 }
                                 match (bind, variant_body) {
-                                    (None, None) => c(&branch.expr),
+                                    (None, None) => c(branch.expr.clone()),
                                     (None, Some(t)) => Err(format!(
                                         "'{enu}::{variant}`' has a body of type {t}, which wasn't bound.",
                                     )),
@@ -768,7 +776,7 @@ pub fn check(
                                             global_scope,
                                             &new_scope,
                                             type_definitions,
-                                            &branch.expr,
+                                            branch.expr.clone(),
                                         )
                                     }
                                 }
@@ -780,7 +788,12 @@ pub fn check(
                             let mut new_scope = local_scope.clone();
                             new_scope.insert(bind.clone(), value_type.clone());
                             not_covered_variants = HashSet::new();
-                            check(global_scope, &new_scope, type_definitions, &branch.expr)
+                            check(
+                                global_scope,
+                                &new_scope,
+                                type_definitions,
+                                branch.expr.clone(),
+                            )
                         }
                     }?;
                     branch_types.push(branch_type);
@@ -811,8 +824,18 @@ fn check_bin_opt(
     type_definitions: &TypeMap,
     bin_opt: &BinaryOperation,
 ) -> Result<Type, String> {
-    let left = check(global_scope, local_scope, type_definitions, &bin_opt.left)?;
-    let right = check(global_scope, local_scope, type_definitions, &bin_opt.right)?;
+    let left = check(
+        global_scope,
+        local_scope,
+        type_definitions,
+        bin_opt.left.clone(),
+    )?;
+    let right = check(
+        global_scope,
+        local_scope,
+        type_definitions,
+        bin_opt.right.clone(),
+    )?;
     use BinaryOperator::*;
     match bin_opt.operator {
         IntAdd | IntSub | IntMul | IntDiv | IntMod => {
