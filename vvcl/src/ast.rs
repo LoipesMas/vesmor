@@ -6,8 +6,6 @@ use std::rc::Rc;
 use crate::eval::ScopeMap;
 use crate::typ_check::TypeName;
 
-// TODO: try changing Box for Rc and test performance
-
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Ident(pub String);
 
@@ -35,12 +33,16 @@ pub enum BinaryOperator {
     IntMul,
     IntDiv,
     IntMod,
+    IntLT,
+    IntGT,
+    IntEQ,
     FloatAdd,
     FloatSub,
     FloatMul,
     FloatDiv,
     FloatLT,
     FloatGT,
+    FloatEQ,
     BoolOr,
     BoolAnd,
     StringConcat,
@@ -56,12 +58,16 @@ impl BinaryOperator {
             "*" => Ok(IntMul),
             "/" => Ok(IntDiv),
             "%" => Ok(IntMod),
+            "<" => Ok(IntLT),
+            ">" => Ok(IntGT),
+            "==" => Ok(IntEQ),
             "+." => Ok(FloatAdd),
             "-." => Ok(FloatSub),
             "*." => Ok(FloatMul),
             "/." => Ok(FloatDiv),
             "<." => Ok(FloatLT),
             ">." => Ok(FloatGT),
+            "==." => Ok(FloatEQ),
             "~" => Ok(StringConcat),
             "~~" => Ok(ListConcat),
             "||" => Ok(BoolOr),

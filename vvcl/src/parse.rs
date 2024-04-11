@@ -143,12 +143,13 @@ macro_rules! alt_tags {
 }
 
 fn binary_operator(input: Span) -> PResult<BinaryOperator> {
+    // TODO: group other ops as well
+    let other_ops = alt_tags!("+.", "-.", "*.", "/.", "~~", "~", "<.", ">.", "==.", "||", "&&");
+    let int_ops = alt_tags!("<", ">", "==", "+", "-", "/", "*", "%");
     map_res(
         // HACK: order of those tags is important:
         // "+." has to be before "+", otherwise it would never be matched
-        alt_tags!(
-            "+.", "-.", "*.", "/.", "+", "-", "*", "/", "~~", "~", "<.", ">.", "||", "&&", "%"
-        ),
+        alt((other_ops, int_ops)),
         |c: Span| BinaryOperator::from_str(&c),
     )(input)
 }

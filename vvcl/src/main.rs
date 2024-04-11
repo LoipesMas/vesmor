@@ -87,7 +87,7 @@ fn main() {
     // should make stuff faster
     // but disabled for now to catch bugs
     // for d in reduced_defs {
-    //     let reduced_f = eval::beta_reduction(&global_scope, &HashMap::new(), d.body);
+    //     let reduced_f = eval::beta_reduction(&global_scope, &HashMap::new(), &d.body);
     //     global_scope.insert(d.name.clone(), reduced_f);
     // }
 
@@ -109,7 +109,10 @@ fn main() {
         main_body.clone()
     };
 
-    let res = eval::beta_reduction(&global_scope, &local_scope, main_body);
+    // for _ in 0..300000 {
+    //     let res = eval::beta_reduction(&global_scope, &local_scope, &main_body);
+    // }
+    let res = eval::beta_reduction(&global_scope, &local_scope, &main_body);
     let t1 = Instant::now();
     dbg!(t1 - t0);
     dbg!(&res);
