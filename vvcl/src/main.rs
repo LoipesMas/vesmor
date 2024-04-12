@@ -55,6 +55,10 @@ fn main() {
     let mut global_scope_types = builtin_function_type_definitions(&type_definitions);
 
     for def in &exprs {
+        if matches!(def.body.borrow(), ast::Expr::Function(_)) {
+            let typ = typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+            global_scope_types.insert(def.name.clone(), typ.clone());
+        }
         let typ = dbg!(typ_check::check(
             &global_scope_types,
             &HashMap::new(),
@@ -62,9 +66,9 @@ fn main() {
             def.body.clone()
         ))
         .unwrap();
-        global_scope_types.insert(def.name.clone(), typ);
+        let old_typ = global_scope_types.insert(def.name.clone(), typ.clone());
+        assert!(old_typ.map_or(true, |o| o == typ));
     }
-    // return;
 
     // 1st pass of "compilation"
     // without global scope
