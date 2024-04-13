@@ -13,14 +13,6 @@ module.exports = {
     },
     module: {
         rules: [
-            // {
-            //     test: /\.grammar$/, // Match grammar files
-            //     use: [
-            //         {
-            //             loader: "lezer-generator/loader",
-            //         },
-            //     ],
-            // },
             {
                 test: /\.(ts|tsx)$/,
                 exclude: /node_modules/,

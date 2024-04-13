@@ -15,28 +15,28 @@ FunctionDef {
 
 
 EnumFull {
-    Type "::" EnumVariant ~expr expression?
+    TypeName "::" EnumVariant expression?
 }
 
 definition {
-    LHS {Identifier} "=" RHS { ~expr expression } DS {";"}
+    LHS {Identifier} "=" RHS { expression } DS {";"}
 }
 
-BinaryOperation { "(" ~expr expression ( "+." | "-." | "*." | "/." | "<." | ">." | "+" | "-" | "*" | "/" | "~~" | "~" ) ~expr expression ")"}
+BinaryOperation { "(" expression ( "+." | "-." | "*." | "/." | "<." | ">." | "+" | "-" | "*" | "/" | "~~" | "~" ) expression ")"}
 
 Record {
-    "<" (~expr expression "|")? definition* ">"
+    "<" (expression "|")? definition* ">"
 }
 
 RecordAccess {
-    "@" ~expr expression "." Identifier
+    "@" expression "." Identifier
 }
 
 FunctionCall {
-    FunctionValue { ~expr expression } "(" (~expr expression ","?)+ ")"
+    FunctionValue { expression } "(" (expression ","?)+ ")"
 }
 
-Block { "{" ((definition+ ~expr expression) | ~expr expression) "}" }
+Block { "{" ((definition+ expression) | expression) "}" }
 
 expression {
   FunctionCall
@@ -67,7 +67,7 @@ EnumVariant {
 }
 
 EnumBranch {
-    Pipe {"|"} EnumVariant Identifier? FatArrow ~expr expression BS {";"}
+    Pipe {"|"} EnumVariant Identifier? FatArrow expression BS {";"}
 }
 
 EnumMatching {
@@ -75,12 +75,12 @@ EnumMatching {
 }
 
 List {
-    "[" (~expr expression ",")* ~expr expression? "]"
+    "[" (expression ",")* expression? "]"
 }
 
-@tokens {
-    BinaryOperator { "+." | "-." | "*." | "/." | "<." | ">." | "+" | "-" | "*" | "/" | "~~" | "~" }
+Type { (TypeName | (TypeName "<" Type ">"))}
 
+@tokens {
     Tick { "`" }
 
     FatArrow { "=>" }
@@ -89,7 +89,7 @@ List {
 
     Identifier { $[a-z] $[a-zA-Z_0-9]* }
 
-    Type { $[A-Z] $[a-zA-Z_0-9<>]*}
+    TypeName { $[A-Z] $[a-zA-Z_0-9]*}
 
     Number { $[+-]? ($[0-9]+ "." $[0-9]+ | $[0-9]+ ) }
 
