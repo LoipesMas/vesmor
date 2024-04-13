@@ -85,7 +85,6 @@ ball_init = <
 >;
 
 ball_size = 0.007;
-ball_size_half = (ball_size /. 2.0);
 
 player_size = 0.15;
 player_size_half = (player_size /. 2.0);
@@ -133,7 +132,7 @@ move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
 
 check_player_ball_collision = (ball_pos: Vec2,player_pos: Vec2) -> Bool {
     y_check = (abs((@player_pos.y -. @ball_pos.y)) <. player_size_half);
-    x_check = (abs((@player_pos.x -. @ball_pos.x)) <. ball_size_half);
+    x_check = (abs((@player_pos.x -. @ball_pos.x)) <. ball_size);
     (y_check && x_check)
 };
 
@@ -157,9 +156,10 @@ bounce_ball_player = (game: Game, side: Side) -> Vec2 {
 bounce_ball_ceiling = (ball: Ball) -> Vec2 {
     pos_y = @@ball.position.y;
     speed = @ball.speed;
-    ? (pos_y <. neg(arena_size_half))
+    arena_size_minus_ball = (arena_size_half -. ball_size);
+    ? (pos_y <. neg(arena_size_minus_ball))
     | True` => < speed | y = abs(@speed.y);>;
-    | False` => ? (pos_y >. arena_size_half)
+    | False` => ? (pos_y >. arena_size_minus_ball)
         | True` => < speed | y = neg(abs(@speed.y));>;
         | False` => speed;
         ;
@@ -192,7 +192,8 @@ next_round = (game: Game) -> Game {
 
 check_goals = (game: Game) -> Game {
     ball_pos = @@game.ball.position;
-    ? ((@ball_pos.x <. neg(arena_size_half)) || (@ball_pos.x >. arena_size_half))
+    arena_size_minus_ball = (arena_size_half -. ball_size);
+    ? ((@ball_pos.x <. neg(arena_size_minus_ball)) || (@ball_pos.x >. arena_size_minus_ball))
         | True` => next_round(game);
         | False` => game;
 };
@@ -234,4 +235,3 @@ event_handler = (game: Game, event: Event) -> GameAndCommands {
         ;
     <game = new_game; commands = [];>
 };
-
