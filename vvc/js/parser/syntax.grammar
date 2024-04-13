@@ -1,0 +1,118 @@
+@top Program { definition* }
+
+@precedence { decl @cut }
+
+
+@skip { space }
+
+argDef {
+    Identifier ":" Type
+}
+
+FunctionDef {
+    "(" (argDef ",")* argDef? ")" "->" Type Block 
+}
+
+
+EnumFull {
+    Type "::" EnumVariant ~expr expression?
+}
+
+definition {
+    LHS {Identifier} "=" RHS { ~expr expression } DS {";"}
+}
+
+BinaryOperation { "(" ~expr expression ( "+." | "-." | "*." | "/." | "<." | ">." | "+" | "-" | "*" | "/" | "~~" | "~" ) ~expr expression ")"}
+
+Record {
+    "<" (~expr expression "|")? definition* ">"
+}
+
+RecordAccess {
+    "@" ~expr expression "." Identifier
+}
+
+FunctionCall {
+    FunctionValue { ~expr expression } "(" (~expr expression ","?)+ ")"
+}
+
+Block { "{" ((definition+ ~expr expression) | ~expr expression) "}" }
+
+expression {
+  FunctionCall
+  FunctionDef
+  Identifier
+  EnumMatching
+  EnumFull
+  List
+  RecordAccess
+  Record
+  Number
+  String
+  Block
+  BinaryOperation
+}
+
+EnumExpr {
+  FunctionCall
+  Identifier
+  BinaryOperation
+  String
+  Number
+  EnumFull
+}
+
+EnumVariant {
+    Type Tick
+}
+
+EnumBranch {
+    Pipe {"|"} EnumVariant Identifier? FatArrow ~expr expression BS {";"}
+}
+
+EnumMatching {
+    QM { "?" } EnumExpr EnumBranch+
+}
+
+List {
+    "[" (~expr expression ",")* ~expr expression? "]"
+}
+
+@tokens {
+    BinaryOperator { "+." | "-." | "*." | "/." | "<." | ">." | "+" | "-" | "*" | "/" | "~~" | "~" }
+
+    Tick { "`" }
+
+    FatArrow { "=>" }
+
+    "=>"
+
+    Identifier { $[a-z] $[a-zA-Z_0-9]* }
+
+    Type { $[A-Z] $[a-zA-Z_0-9<>]*}
+
+    Number { $[+-]? ($[0-9]+ "." $[0-9]+ | $[0-9]+ ) }
+
+    String { '"' (!["\\] | "\\" _)* '"' }
+
+    space { $[ \t\n\r]+ }
+
+    "(" ")"
+
+    "?"
+
+    "|"
+
+    "->"
+
+    "{" "}"
+
+    ":" "::" ";" "," "@" "." "<" ">" "[" "]"
+
+    "+." "-." "*." "/." "<." ">." "+" "-" "*" "/" "~~" "~"
+
+    "="
+
+}
+
+@detectDelim

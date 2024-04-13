@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "es6",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "jsx": "react",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./js"
+  },
+  "include": ["js/**/*.ts", "js/**/*.tsx", "js/**/*.d.ts"],
+  "exclude": ["node_modules"]
+}
+

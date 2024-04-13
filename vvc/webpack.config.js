@@ -6,44 +6,66 @@ const webpack = require("webpack");
 const dist = path.resolve(__dirname, "dist");
 
 module.exports = {
-  mode: "production",
-  experiments: {
-    asyncWebAssembly: true,
-  },
-  module: {
-    rules: [{
-      test: /\.wasm$/,
-      type: "webassembly/async"
-    }]
-  },
-  entry: {
-    index: "./js/index.js"
-  },
-  output: {
-    hashFunction: "xxhash64",
-    path: dist,
-    filename: "[name].js"
-  },
-  devServer: {
-    static: [dist],
-  },
-  performance: { hints: false },
-  plugins: [
-    new CopyPlugin({
-      patterns: [
-        path.resolve(__dirname, "static")
-      ]
-    }),
+    // mode: "production",
+    mode: "development",
+    experiments: {
+        asyncWebAssembly: true,
+    },
+    module: {
+        rules: [
+            // {
+            //     test: /\.grammar$/, // Match grammar files
+            //     use: [
+            //         {
+            //             loader: "lezer-generator/loader",
+            //         },
+            //     ],
+            // },
+            {
+                test: /\.(ts|tsx)$/,
+                exclude: /node_modules/,
+                use: "ts-loader",
+            },
+            {
+                test: /\.wasm$/,
+                type: "webassembly/async",
+            },
+            {
+                test: /\.js$/,
+                exclude: /node_modules/,
+                use: "babel-loader",
+            },
+        ],
+    },
+    resolve: {
+        extensions: [".ts", ".tsx", ".js"],
+    },
+    entry: {
+        index: "./js/index.js",
+    },
+    output: {
+        hashFunction: "xxhash64",
+        path: dist,
+        filename: "[name].js",
+    },
+    devServer: {
+        static: [dist],
+    },
+    performance: { hints: false },
+    plugins: [
+        new CopyPlugin({
+            patterns: [path.resolve(__dirname, "static")],
+        }),
 
-    new WasmPackPlugin({
-      crateDirectory: __dirname,
-    }),
-    new webpack.LoaderOptionsPlugin({
-      options: {
-        experiments: {
-          asyncWebAssembly: true
-        }
-      }
-    }),
-  ]
+        new WasmPackPlugin({
+            crateDirectory: __dirname,
+        }),
+        new webpack.LoaderOptionsPlugin({
+            options: {
+                experiments: {
+                    asyncWebAssembly: true,
+                },
+            },
+        }),
+    ],
 };

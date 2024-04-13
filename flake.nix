@@ -65,6 +65,12 @@
           gcc
           nodejs
           wasm-pack
+          # for webdev
+          typescript
+          nodePackages.typescript-language-server
+          nodePackages.prettier
+          vscode-langservers-extracted
+          tailwindcss-language-server
         ];
       };
     });
