@@ -1,7 +1,6 @@
 import { basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { defaultKeymap } from "@codemirror/commands";
 import { vvcl } from "./parser/index";
 
 import { tags } from "@lezer/highlight";
@@ -22,8 +21,17 @@ const keymaps = [
             let current_pos = selection.from;
             console.log(current_pos);
             let t = ev.state.update(
-                { changes: { from: current_pos, insert: "<  >" }, sequential: true },
-                { selection: { anchor: current_pos+2, head: current_pos+2 }, sequential: true }
+                {
+                    changes: { from: current_pos, insert: "<  >" },
+                    sequential: true,
+                },
+                {
+                    selection: {
+                        anchor: current_pos + 2,
+                        head: current_pos + 2,
+                    },
+                    sequential: true,
+                }
             );
             ev.update([t]);
             return true;
@@ -78,15 +86,20 @@ function state_from_code(code: string): EditorState {
 
 let startState = state_from_code("Loading...");
 
-let output_el = document.getElementById("output");
+let output_el: HTMLElement | null = null;
 
-let el = document.getElementById("codemirror-holder");
 export let view: EditorView | null = null;
-if (el !== null) {
-    view = new EditorView({
-        state: startState,
-        parent: el,
-    });
+
+export function init() {
+    let el = document.getElementById("codemirror-holder");
+    output_el = document.getElementById("output");
+    if (el !== null) {
+        view = new EditorView({
+            state: startState,
+            parent: el,
+        });
+    }
+    return view;
 }
 
 export function get_code(): string | undefined {

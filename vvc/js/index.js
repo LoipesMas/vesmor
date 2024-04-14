@@ -1,5 +1,7 @@
-import { full_reload, hot_reload, check_code } from "./game_loader.ts";
-import { get_code, set_output, reset_code } from "./editor.ts";
+import { get_code, set_output, reset_code, init as init_editor } from "./editor.ts";
+import { full_reload, hot_reload, check_code, init as init_game } from "./game_loader.ts";
+
+import "./style.scss";
 
 window.full_reload = () => {
     let source = get_code();
@@ -27,4 +29,5 @@ function check_source_code() {
 }
 window.check_source_code = check_source_code;
 
-reset_code("game.vvc");
+setTimeout(() => {init_game().then(() => console.log("foo"))},0)
+setTimeout(() => {init_editor(); reset_code("game.vvc")},0)
