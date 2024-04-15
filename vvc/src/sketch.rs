@@ -80,15 +80,42 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
     let mut global_scope_types =
         vvcl::builtin_functions::builtin_function_type_definitions(&type_definitions);
 
+    // FIXME: just having two passes doesn't solve it...
+    // first type check pass
     for def in &exprs {
-        let typ = vvcl::typ_check::check(
+        if matches!(def.body.borrow(), vvcl::ast::Expr::Function(_)) {
+            let typ =
+                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+            global_scope_types.insert(def.name.clone(), typ.clone());
+        }
+        let typ = dbg!(vvcl::typ_check::check(
             &global_scope_types,
             &HashMap::new(),
             &type_definitions,
-            def.body.clone(),
-        )
+            def.body.clone()
+        ));
+        // type checking can fail, because not all types are known yet
+        if let Ok(typ) = typ {
+            let old_typ = global_scope_types.insert(def.name.clone(), typ.clone());
+            assert!(old_typ.map_or(true, |o| o == typ));
+        }
+    }
+    // second type check pass, with global scope
+    for def in &exprs {
+        if matches!(def.body.borrow(), vvcl::ast::Expr::Function(_)) {
+            let typ =
+                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+            global_scope_types.insert(def.name.clone(), typ.clone());
+        }
+        let typ = dbg!(vvcl::typ_check::check(
+            &global_scope_types,
+            &HashMap::new(),
+            &type_definitions,
+            def.body.clone()
+        ))
         .map_err(|e| format!("In definition of {}: {}", def.name, e))?;
-        global_scope_types.insert(def.name.clone(), typ);
+        let old_typ = global_scope_types.insert(def.name.clone(), typ.clone());
+        assert!(old_typ.map_or(true, |o| o == typ));
     }
 
     let init_type = global_scope_types
@@ -238,31 +265,13 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
         panic!("parsing failed! input left:\n{input}");
     };
 
-    let mut type_definitions = vvcl::typ_check::default_type_definitions();
-    extend_type_definitions(&mut type_definitions);
-
     let mut exprs = vec![];
 
     for def in defs.into_iter() {
         match def {
-            vvcl::parse::TopLevelDefinition::Type(t) => {
-                type_definitions.insert(t.name, t.body.to_type(&type_definitions).unwrap());
-            }
+            vvcl::parse::TopLevelDefinition::Type(_) => {}
             vvcl::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
         }
-    }
-    let mut global_scope_types =
-        vvcl::builtin_functions::builtin_function_type_definitions(&type_definitions);
-
-    for def in &exprs {
-        let typ = vvcl::typ_check::check(
-            &global_scope_types,
-            &HashMap::new(),
-            &type_definitions,
-            def.body.clone(),
-        )
-        .unwrap();
-        global_scope_types.insert(def.name.clone(), typ);
     }
 
     // 1st pass of "compilation"

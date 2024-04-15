@@ -121,7 +121,7 @@ impl Type {
         }
     }
 
-    pub(crate) fn from_function_def_unchecked(fun: &Expr, type_definitions: &TypeMap) -> Self {
+    pub fn from_function_def_unchecked(fun: &Expr, type_definitions: &TypeMap) -> Self {
         if let Expr::Function(fun) = fun {
             Type::Function {
                 args: fun
