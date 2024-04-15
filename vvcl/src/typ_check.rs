@@ -514,12 +514,25 @@ pub fn check(
         }
         Expr::Block(b) => {
             let mut new_scope = local_scope.clone();
+            // FIXME: just having two passes doesn't solve it...
+            // first pass
             for def in &b.definitions {
-                new_scope.insert(
-                    def.name.clone(),
-                    check(global_scope, &new_scope, type_definitions, def.body.clone())
-                        .with_context(format!("In definition of '{}': ", def.name))?,
-                );
+                if combined_scope.get(&def.name).is_some() || new_scope.contains_key(&def.name) {
+                    return Err(format!("'{}' already defined.", def.name))
+                        .with_context("In block body: ".to_owned());
+                }
+                let typ = check(global_scope, &new_scope, type_definitions, def.body.clone())
+                    .with_context(format!("In definition of '{}': ", def.name));
+                // can fail, because they can rely on other definitions
+                if let Ok(typ) = typ {
+                    new_scope.insert(def.name.clone(), typ);
+                }
+            }
+            // second pass
+            for def in &b.definitions {
+                let typ = check(global_scope, &new_scope, type_definitions, def.body.clone())
+                    .with_context(format!("In definition of '{}': ", def.name))?;
+                new_scope.insert(def.name.clone(), typ);
             }
             check(global_scope, &new_scope, type_definitions, b.expr.clone())
                 .with_context("In block body: ".to_owned())

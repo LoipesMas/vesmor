@@ -54,6 +54,26 @@ fn main() {
     }
     let mut global_scope_types = builtin_function_type_definitions(&type_definitions);
 
+    // FIXME: just having two passes doesn't solve it...
+    // first type check pass
+    for def in &exprs {
+        if matches!(def.body.borrow(), ast::Expr::Function(_)) {
+            let typ = typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+            global_scope_types.insert(def.name.clone(), typ.clone());
+        }
+        let typ = dbg!(typ_check::check(
+            &global_scope_types,
+            &HashMap::new(),
+            &type_definitions,
+            def.body.clone()
+        ));
+        // type checking can fail, because not all types are known yet
+        if let Ok(typ) = typ {
+            let old_typ = global_scope_types.insert(def.name.clone(), typ.clone());
+            assert!(old_typ.map_or(true, |o| o == typ));
+        }
+    }
+    // second type check pass, with global scope
     for def in &exprs {
         if matches!(def.body.borrow(), ast::Expr::Function(_)) {
             let typ = typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
