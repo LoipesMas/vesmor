@@ -54,6 +54,11 @@ module.exports = {
     },
     devServer: {
         static: [dist],
+        client: {
+            overlay: {
+                runtimeErrors: false,
+            },
+        },
     },
     performance: { hints: false },
     plugins: [
