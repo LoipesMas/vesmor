@@ -5,25 +5,27 @@ type Game = {
     check_code(code: string): Promise<string>;
 };
 let game: Game | null = null;
+
+const error_msg = "no game :("
 export async function full_reload(source: string): Promise<string> {
     if (game) {
     return game.update_source_code(source, false);
     } else {
-        return ""
+        return error_msg
     }
 }
 export async function hot_reload(source: string): Promise<string> {
     if (game) {
     return game.update_source_code(source, true);
     } else {
-        return ""
+        return error_msg
     }
 }
 export async function check_code(source: string): Promise<string> {
     if (game) {
     return game.check_code(source);
     } else {
-        return ""
+        return error_msg
     }
 }
 

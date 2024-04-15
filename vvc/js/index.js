@@ -29,5 +29,5 @@ function check_source_code() {
 }
 window.check_source_code = check_source_code;
 
-setTimeout(() => {init_game().then(() => console.log("foo"))},0)
+setTimeout(() => {init_game()},0)
 setTimeout(() => {init_editor(); reset_code("game.vvc")},0)

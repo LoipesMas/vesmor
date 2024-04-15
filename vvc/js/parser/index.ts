@@ -1,4 +1,4 @@
-import { parser } from "./vvcl.js";
+import { parser } from "./vvcl";
 import {
     LRLanguage,
     LanguageSupport,
@@ -8,8 +8,6 @@ import {
     delimitedIndent,
 } from "@codemirror/language";
 import { styleTags, tags as t } from "@lezer/highlight";
-
-console.log(parser.parse("min = foo(bar, b);").toString());
 
 export const vvclLanguage = LRLanguage.define({
     parser: parser.configure({

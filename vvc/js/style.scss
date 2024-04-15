@@ -1,0 +1,85 @@
+$dark-blue: #001020;
+$blue: #002532;
+$light-blue: #223344;
+$highlight: #ff7d00;
+$highlight2: #fc7d5d;
+
+body {
+    padding: 1em;
+    min-height: 100vh;
+    min-width: 100vw;
+    background-color: $dark-blue;
+}
+
+.main-box {
+    display: flex;
+}
+
+.btn-group {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+button {
+    margin: 0.2rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 1.3rem;
+    color: $highlight;
+    background-color: $blue;
+    border: 0;
+    border-radius: 5px;
+    &:hover {
+        background-color: $light-blue;
+    }
+}
+
+#output {
+    max-width: 70vh;
+    font-size: larger;
+    border: 0;
+    font-size: large;
+    border: 1px solid $highlight;
+    padding: 0.5rem;
+    color: $highlight;
+}
+
+h1, h2, h3 {
+    color: $highlight;
+}
+
+.center-panel {
+    border: 1px solid $highlight;
+    margin: 0 auto;
+    padding: 1em;
+    width: 80vh;
+    max-width: 90%;
+    text-align: center;
+    font-size: 1.3em;
+
+    p, li {
+        color: #bbb;
+    }
+    ul {
+        text-align: left;
+        display: table;
+        margin: auto;
+        ::marker {
+            color: $highlight2;
+        }
+
+            background-color: $blue;
+            padding: 0.5em 2em;
+            border: 1px solid $highlight2;
+    }
+}
+
+.term {
+    color: $highlight;
+    font-family: monospace;
+    font-size: 1.2em;
+}
+
+a {
+    color: $highlight2;
+}
