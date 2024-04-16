@@ -117,7 +117,7 @@ export function set_output(output: string) {
   }
 }
 
-export async function reset_code(source: URL): Promise<void> {
+export async function reset_code(source: string): Promise<void> {
   return fetch(source)
     .then((resp) => resp.text())
     .then(set_code);

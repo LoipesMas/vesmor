@@ -44,7 +44,7 @@ module.exports = {
         extensions: [".ts", ".tsx", ".js"],
     },
     entry: {
-        index: "./js/index.js",
+        index: "./js/index.ts",
         manual: "./js/manual.ts",
     },
     output: {
