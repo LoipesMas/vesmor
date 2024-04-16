@@ -47,7 +47,11 @@ fn main() {
     for def in defs.into_iter() {
         match def {
             TopLevelDefinition::Type(t) => {
-                type_definitions.insert(t.name, t.body.to_type(&type_definitions).unwrap());
+                let prev = type_definitions
+                    .insert(t.name.clone(), t.body.to_type(&type_definitions).unwrap());
+                if prev.is_some() {
+                    panic!("Redefiniton of type '{}'", t.name);
+                }
             }
             TopLevelDefinition::Expr(e) => exprs.push(e),
         }

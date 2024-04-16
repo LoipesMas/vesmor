@@ -72,6 +72,9 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
                     .body
                     .to_type(&type_definitions)
                     .map_err(|e| format!("In type {}: {}", t.name, e))?;
+                if type_definitions.contains_key(&t.name) {
+                    return Err(format!("Redefinition of type '{}'", t.name));
+                }
                 type_definitions.insert(t.name, body_type);
             }
             vvcl::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
