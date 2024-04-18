@@ -1,12 +1,14 @@
 <!doctype html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <title>VVC</title>
-    </head>
-    <body class="main-box">
-        <script src="index.js"></script>
 
+<head>
+    <meta charset="UTF-8" />
+    <title>VVC</title>
+</head>
+
+<body>
+    <script src="index.js"></script>
+    <div class="main-box" id="main-box">
         <div class="btn-group">
             <div id="codemirror-holder"></div>
             <p id="output"></p>
@@ -19,5 +21,14 @@
             <button type="button" id="reset_code">RESET CODE</button>
             <a href="manual.html"><button type="">MANUAL</button></a>
         </div>
-    </body>
+
+        <div id="game-container">
+            <div class="loader">
+                <div class="lds-dual-ring"></div>
+                <div class="loading-text">Loading...</div>
+            </div>
+        </div>
+    </div>
+</body>
+
 </html>
