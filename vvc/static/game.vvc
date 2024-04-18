@@ -207,31 +207,36 @@ clamp_player_pos = (pos: Vec2) -> Vec2 {
 
 GameAndCommands : < game: Game, commands: List<Command>>;
 
+draw = (game: Game) -> List<Command> {
+    ball_commands = draw_ball(@@game.ball.position);
+    left_p_commands = draw_player(@game.player_left, Side::Left`);
+    right_p_commands = draw_player(@game.player_right, Side::Right`);
+    ((ball_commands ~~ draw_arena) ~~ (left_p_commands ~~ right_p_commands))
+};
+
 update_handler = (game: Game, delta: Float) -> GameAndCommands {
     ball = ball_movement(game, delta);
     checked_game = check_goals(<game | ball = ball;>);
-    ball_commands = draw_ball(@@checked_game.ball.position);
     clamped_l_pl = clamp_player_pos(@game.player_left);
     clamped_r_pl = clamp_player_pos(@game.player_right);
-    left_p_commands = draw_player(clamped_l_pl, Side::Left`);
-    right_p_commands = draw_player(clamped_r_pl, Side::Right`);
-    commands = ((ball_commands ~~ draw_arena) ~~ (left_p_commands ~~ right_p_commands));
-    <
-    game = < checked_game | player_left = clamped_l_pl; player_right = clamped_r_pl;>;
-    commands = commands;
-    >
+    new_game = < checked_game | player_left = clamped_l_pl; player_right = clamped_r_pl; >;
+    commands = draw(new_game);
+    < game = new_game; commands = commands;>
 };
 
 event_handler = (game: Game, event: Event) -> GameAndCommands {
-    new_game = ? event
-        | KeyDown` key => ? key
-            | W` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, player_move_speed));>;
-            | F` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, neg(player_move_speed)));>;
-            | U` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, player_move_speed));>;
-            | Y` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, neg(player_move_speed)));>;
-            | _ => game;
-            ;
-        | _ => game;
-        ;
-    <game = new_game; commands = [];>
+    ? event
+        | Tick` delta => update_handler(game, delta);
+        | KeyDown` key => {
+            new_game = ? key
+                | W` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, player_move_speed));>;
+                | F` => < game | player_left = add_vec2s(@game.player_left, vec2(0.0, neg(player_move_speed)));>;
+                | U` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, player_move_speed));>;
+                | Y` => < game | player_right = add_vec2s(@game.player_right, vec2(0.0, neg(player_move_speed)));>;
+                | _ => game;
+                ;
+            < game = new_game; commands = []; >
+            };
+        | _ => < game = game; commands = [];>;
 };
+

@@ -11,8 +11,8 @@ use nannou::{
 };
 use vvcl::{
     ast::Ident,
-    typ_check::{float_type, Type},
-    utils::ident,
+    typ_check::{concrete_list_type, float_type, Type},
+    utils::{enum_variant, ident, ErrWithContext},
 };
 
 #[derive(Clone)]
@@ -52,6 +52,8 @@ fn web_print(s: &str) {
 
 const DEFAULT_VIEWPORT_SIZE: (u32, u32) = (720, 720);
 
+// used in web build
+#[allow(dead_code)]
 pub fn check_source_code(code: &str) -> Result<(), String> {
     let contents = code.replace(['\n', ' '], "");
     let contents = vvcl::utils::wrap_in_span(&contents);
@@ -88,7 +90,8 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
     for def in &exprs {
         if matches!(def.body.borrow(), vvcl::ast::Expr::Function(_)) {
             let typ =
-                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions)
+                    .with_context(format!("In signature of {}: ", def.name))?;
             global_scope_types.insert(def.name.clone(), typ.clone());
         }
         let typ = dbg!(vvcl::typ_check::check(
@@ -107,7 +110,8 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
     for def in &exprs {
         if matches!(def.body.borrow(), vvcl::ast::Expr::Function(_)) {
             let typ =
-                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions)
+                    .with_context(format!("In signature of {}: ", def.name))?;
             global_scope_types.insert(def.name.clone(), typ.clone());
         }
         let typ = dbg!(vvcl::typ_check::check(
@@ -125,33 +129,43 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
         .get(&ident("init"))
         .ok_or("`init` value should be defined at top-level".to_string())?;
 
-    let update_function_type = global_scope_types
-        .get(&ident("update_handler"))
-        .ok_or("`update_handler` function should be defined at top-level".to_string())?;
+    let event_function_type = global_scope_types
+        .get(&ident("event_handler"))
+        .ok_or("`event_handler` function should be defined at top-level".to_string())?;
 
+    // check event_handler
     if let Type::Function {
         args,
         return_type: _,
-    } = update_function_type
+    } = event_function_type
     {
+        if args.len() != 2 {
+            return Err(
+                "`event_handler` function should take 2 arguments: game state and event"
+                    .to_string(),
+            );
+        }
         let first_type = args
             .first()
-            .ok_or("`update_handler` function should take 2 arguments: game state and delta")?;
+            .ok_or("`event_handler` function should take 2 arguments: game state and event")?;
         let second_type = args
             .get(1)
-            .ok_or("`update_handler` function should take 2 arguments: game state and delta")?;
+            .ok_or("`event_handler` function should take 2 arguments: game state and event")?;
         if first_type != init_type {
-            return Err(format!("First argument to `update_handler` should be of the same type as `init`, got {first_type} and {init_type}."));
+            return Err(format!("First argument to `event` should be of the same type as `init`, got '{first_type}' and '{init_type}'."));
         }
-        if *second_type != float_type() {
+        if *second_type != event_enum() {
             return Err(format!(
-                "Second argument to `update_handler` should be of type Float, got {second_type}."
+                "Second argument to `event_handler` should be of type Event, got {second_type}."
             ));
         }
         // TODO: check return type
+        // do this before release pls
+    } else {
+        return Err(format!(
+            "`event_handler` should be a function, got '{event_function_type}'"
+        ));
     }
-
-    // TODO: check `event_handler`
 
     Ok(())
 }
@@ -212,7 +226,6 @@ pub struct Model {
 struct Runtime {
     global_scope: vvcl::eval::ScopeMap,
     game_state: vvcl::ast::RExpr,
-    update_function: vvcl::ast::RExpr,
     event_function: vvcl::ast::RExpr,
 }
 
@@ -228,31 +241,33 @@ fn event_enum() -> Type {
         enu: ident("Key"),
         variants: keys.map(|k| (ident(&format!("{k:?}")), None)).into(),
     };
-    let event_variants = ["KeyPressed", "KeyDown"]
+    let mut event_variants: HashMap<_, _> = ["KeyPressed", "KeyDown"]
         .map(|v| (ident(v), Some(keys_enum.clone())))
         .into();
+    event_variants.insert(ident("Tick"), Some(float_type()));
     Type::Enum {
         enu: ident("Event"),
         variants: event_variants,
     }
 }
 
-fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
-    let vec2_type = Type::Record([(ident("x"), float_type()), (ident("y"), float_type())].into());
-    type_definitions.insert(ident("Vec2"), vec2_type.clone());
-    let draw_line_body = Type::Record(
-        [
-            (ident("start"), vec2_type.clone()),
-            (ident("end"), vec2_type.clone()),
-        ]
-        .into(),
-    );
-    let command_enum = Type::Enum {
+fn vec2_type() -> Type {
+    Type::Record([(ident("x"), float_type()), (ident("y"), float_type())].into())
+}
+
+fn command_enum() -> Type {
+    let draw_line_body =
+        Type::Record([(ident("start"), vec2_type()), (ident("end"), vec2_type())].into());
+    Type::Enum {
         enu: ident("Command"),
         variants: [(ident("DrawLine"), Some(draw_line_body))].into(),
-    };
-    type_definitions.insert(ident("Command"), command_enum.clone());
-    type_definitions.insert(ident("Event"), event_enum().clone());
+    }
+}
+
+fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
+    type_definitions.insert(ident("Vec2"), vec2_type());
+    type_definitions.insert(ident("Command"), command_enum());
+    type_definitions.insert(ident("Event"), event_enum());
 }
 
 fn init_runtime(source_code: &SourceCode) -> Runtime {
@@ -290,13 +305,6 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
     global_scope.extend(vvcl::utils::map_from_defs(reduced_defs));
 
     let game_state = global_scope.get(&ident("init")).unwrap().clone();
-    let update_function = if let vvcl::ast::Expr::Function(f) =
-        global_scope.get(&ident("update_handler")).unwrap().borrow()
-    {
-        f.body.clone()
-    } else {
-        panic!("`update_handler` should have been a function.")
-    };
     let event_function = if let vvcl::ast::Expr::Function(f) =
         global_scope.get(&ident("event_handler")).unwrap().borrow()
     {
@@ -304,13 +312,26 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
     } else {
         panic!("`event_handler` should have been a function.")
     };
-
     Runtime {
         global_scope,
         game_state,
-        update_function,
         event_function,
     }
+}
+
+fn run_event_handler(
+    global_scope: &HashMap<Ident, vvcl::ast::RExpr>,
+    event_function: vvcl::ast::RExpr,
+    game_state: vvcl::ast::RExpr,
+    event: vvcl::ast::RExpr,
+) -> (vvcl::ast::RExpr, Vec<Command>) {
+    let mut local_scope = vvcl::eval::ScopeMap::new();
+    local_scope.insert(ident("event"), event);
+    local_scope.insert(ident("game"), game_state);
+
+    let evaled = vvcl::eval::beta_reduction(global_scope, &local_scope, &event_function);
+
+    extract_state_and_commands(evaled)
 }
 
 fn key_down(model: &mut Model, key: Key) {
@@ -318,42 +339,36 @@ fn key_down(model: &mut Model, key: Key) {
     let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
     let event_enum = vvcl::utils::enum_variant("Event", "KeyDown", Some(key_enum));
 
-    let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(ident("event"), event_enum);
-    local_scope.insert(ident("game"), model.runtime.game_state.clone());
+    web_print(&format!("down {event_enum:?}"));
 
-    let evaled = vvcl::eval::beta_reduction(
+    let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
-        &local_scope,
-        &model.runtime.event_function,
+        model.runtime.event_function.clone(),
+        model.runtime.game_state.clone(),
+        event_enum,
     );
 
-    let (game_state, commands) = extract_state_and_commands(evaled);
     model.runtime.game_state = game_state;
     model.commands.extend(commands);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
-    let is_new = model.pressed_keys.insert(key);
-    if !is_new {
-        // only send event if key wasn't already pressed
+    web_print(&format!("pressed {key:?}"));
+    if model.pressed_keys.contains(&key) {
+        // already pressed, nothing to do
         return;
     }
+    model.pressed_keys.insert(key);
     let key_str = format!("{key:?}");
     let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
     let event_enum = vvcl::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
 
-    let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(ident("event"), event_enum);
-    local_scope.insert(ident("game"), model.runtime.game_state.clone());
-
-    let evaled = vvcl::eval::beta_reduction(
+    let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
-        &local_scope,
-        &model.runtime.event_function,
+        model.runtime.event_function.clone(),
+        model.runtime.game_state.clone(),
+        event_enum,
     );
-
-    let (game_state, commands) = extract_state_and_commands(evaled);
     model.runtime.game_state = game_state;
     model.commands.extend(commands);
 }
@@ -416,20 +431,22 @@ fn update(_app: &App, model: &mut Model, update: Update) {
             }
         }
     });
-    let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
-    let mut local_scope = vvcl::eval::ScopeMap::new();
-    local_scope.insert(ident("delta"), vvcl::ast::Expr::Float(delta).into());
-    local_scope.insert(ident("game"), model.runtime.game_state.clone());
 
-    let updated = vvcl::eval::beta_reduction(
+    let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
+    let event = enum_variant("Event", "Tick", Some(vvcl::ast::Expr::Float(delta).into()));
+
+    let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
-        &local_scope,
-        &model.runtime.update_function,
+        model.runtime.event_function.clone(),
+        model.runtime.game_state.clone(),
+        event,
     );
 
-    let (game_state, commands) = extract_state_and_commands(updated);
-
     model.runtime.game_state = game_state;
+    // TODO: does this lose key events?
+    // if key event happens between update and view
+    // we should check if nannou makes any guarentees about order
+    // if it doesn't, we should maybe store commands_to_be_drawn separately
     model.commands = commands;
 
     for key in model.pressed_keys.clone() {

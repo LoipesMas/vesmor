@@ -262,31 +262,31 @@ pub fn builtin_function_type_definitions(
     [
         (
             ident("double"),
-            Type::from_function_def_unchecked(&double(), type_definitions),
+            Type::from_function_def_unchecked(&double(), type_definitions).unwrap(),
         ),
         (
             ident("int_to_str"),
-            Type::from_function_def_unchecked(&int_to_str(), type_definitions),
+            Type::from_function_def_unchecked(&int_to_str(), type_definitions).unwrap(),
         ),
         (
             ident("list_map"),
-            Type::from_function_def_unchecked(&list_map(), type_definitions),
+            Type::from_function_def_unchecked(&list_map(), type_definitions).unwrap(),
         ),
         (
             ident("list_get"),
-            Type::from_function_def_unchecked(&list_get(), type_definitions),
+            Type::from_function_def_unchecked(&list_get(), type_definitions).unwrap(),
         ),
         (
             ident("list_size"),
-            Type::from_function_def_unchecked(&list_size(), type_definitions),
+            Type::from_function_def_unchecked(&list_size(), type_definitions).unwrap(),
         ),
         (
             ident("sin"),
-            Type::from_function_def_unchecked(&sin(), type_definitions),
+            Type::from_function_def_unchecked(&sin(), type_definitions).unwrap(),
         ),
         (
             ident("cos"),
-            Type::from_function_def_unchecked(&cos(), type_definitions),
+            Type::from_function_def_unchecked(&cos(), type_definitions).unwrap(),
         ),
     ]
     .into()

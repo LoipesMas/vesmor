@@ -40,6 +40,13 @@ pub fn generic_list_type() -> Type {
     }
 }
 
+pub fn concrete_list_type(typ: Type) -> Type {
+    Type::Simple {
+        name: ident("List"),
+        subtype: Some(Box::new(typ)),
+    }
+}
+
 pub fn type_hole_name() -> NormalTypeName {
     NormalTypeName {
         name: ident("_"),
@@ -121,18 +128,21 @@ impl Type {
         }
     }
 
-    pub fn from_function_def_unchecked(fun: &Expr, type_definitions: &TypeMap) -> Self {
+    pub fn from_function_def_unchecked(
+        fun: &Expr,
+        type_definitions: &TypeMap,
+    ) -> Result<Self, String> {
         if let Expr::Function(fun) = fun {
-            Type::Function {
+            Ok(Type::Function {
                 args: fun
                     .arguments
                     .iter()
-                    .map(|d| d.typ.to_type(type_definitions).unwrap())
-                    .collect(),
-                return_type: Box::new(fun.return_type.to_type(type_definitions).unwrap()),
-            }
+                    .map(|d| d.typ.to_type(type_definitions))
+                    .collect::<Result<_, _>>()?,
+                return_type: Box::new(fun.return_type.to_type(type_definitions)?),
+            })
         } else {
-            panic!("gimme function")
+            Err("Expected a function to `from_function_def_unchecked`".to_owned())
         }
     }
 
