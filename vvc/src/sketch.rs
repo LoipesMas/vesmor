@@ -339,8 +339,6 @@ fn key_down(model: &mut Model, key: Key) {
     let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
     let event_enum = vvcl::utils::enum_variant("Event", "KeyDown", Some(key_enum));
 
-    web_print(&format!("down {event_enum:?}"));
-
     let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
         model.runtime.event_function.clone(),
@@ -353,7 +351,6 @@ fn key_down(model: &mut Model, key: Key) {
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
-    web_print(&format!("pressed {key:?}"));
     if model.pressed_keys.contains(&key) {
         // already pressed, nothing to do
         return;
