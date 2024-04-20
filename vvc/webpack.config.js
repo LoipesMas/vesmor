@@ -2,6 +2,7 @@ const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const webpack = require("webpack");
+const sveltePreprocess = require("svelte-preprocess");
 
 const dist = path.resolve(__dirname, "dist");
 
@@ -11,6 +12,7 @@ module.exports = {
     experiments: {
         asyncWebAssembly: true,
     },
+    devtool: 'eval-cheap-module-source-map',
     module: {
         rules: [
             {
@@ -28,6 +30,22 @@ module.exports = {
                 use: "babel-loader",
             },
             {
+                test: /\.(html|svelte)$/,
+                use: {
+                    loader: "svelte-loader",
+                    options: {
+                        preprocess: sveltePreprocess(),
+                    },
+                },
+            },
+            {
+                // required to prevent errors from Svelte on Webpack 5+, omit on Webpack 4
+                test: /node_modules\/svelte\/.*\.mjs$/,
+                resolve: {
+                    fullySpecified: false,
+                },
+            },
+            {
                 test: /\.s[ac]ss$/i,
                 use: [
                     // Creates `style` nodes from JS strings
@@ -41,11 +59,15 @@ module.exports = {
         ],
     },
     resolve: {
-        extensions: [".ts", ".tsx", ".js"],
+        alias: {
+            svelte: path.resolve("node_modules", "svelte/src/runtime"), // Svelte 3: path.resolve('node_modules', 'svelte')
+        },
+        extensions: [".mjs", ".js", ".svelte", ".ts", ".tsx"],
+        mainFields: ["svelte", "browser", "module", "main"],
+        conditionNames: ["svelte", "browser", "import"],
     },
     entry: {
-        index: "./js/index.ts",
-        manual: "./js/manual.ts",
+        index: "./js/index.js",
     },
     output: {
         hashFunction: "xxhash64",

@@ -71,6 +71,8 @@
           nodePackages.prettier
           vscode-langservers-extracted
           tailwindcss-language-server
+          nodePackages.svelte-check
+          nodePackages.svelte-language-server
         ];
       };
     });

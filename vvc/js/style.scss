@@ -27,11 +27,10 @@ body {
     margin: 0 1em;
     border: 1px solid $highlight;
     padding: 1rem;
-}
-
-.vert-spacer {
-    margin: 0.7em 0;
-    border-top: 1px solid $highlight;
+    hr {
+        width: 90%;
+        color: $highlight;
+    }
 }
 
 button {
@@ -63,19 +62,20 @@ button {
     color: $highlight;
 }
 
-#manual-dialog {
-    background-color: $dark-blue;
-    border: 1px solid $highlight;
+#manual {
     margin: auto;
-    padding: 1em;
+    padding: 0;
     width: 85vh;
     max-width: 90%;
     text-align: center;
-    font-size: 1.3em;
-    height: 90vh;
+    font-size: 1em;
 
     &::backdrop {
         backdrop-filter: blur(3px);
+    }
+
+    div {
+        padding: 1em;
     }
 
     p,
