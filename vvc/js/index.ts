@@ -29,6 +29,19 @@ function check_source_code() {
     }
 }
 
+function show_manual() {
+    const manual_dialog = document.getElementById("manual-dialog");
+    if (manual_dialog) {
+        if (manual_dialog instanceof HTMLDialogElement) {
+            manual_dialog.showModal();
+        } else {
+            throw "manual_dialog not a dialog";
+        }
+    } else {
+        throw "No manual_dialog";
+    }
+}
+
 function init() {
     const full_reload_button = document.getElementById("full_reload");
     if (full_reload_button) {
@@ -64,6 +77,13 @@ function init() {
         check_source_code_button.addEventListener("click", check_source_code);
     } else {
         throw "No check_source_code_button";
+    }
+
+    const show_manual_button = document.getElementById("show_manual");
+    if (show_manual_button) {
+        show_manual_button.addEventListener("click", show_manual);
+    } else {
+        throw "No show_manual_button";
     }
 
     init_game();
