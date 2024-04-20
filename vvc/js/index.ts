@@ -66,9 +66,9 @@ function init() {
         throw "No check_source_code_button";
     }
 
-        init_game();
-        init_editor();
-        reset_code("game.vvc");
+    init_game();
+    init_editor();
+    reset_code("game.vvc");
 }
 
 setTimeout(init, 0);
