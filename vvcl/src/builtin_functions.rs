@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{borrow::Borrow, collections::HashMap, rc::Rc};
+use std::{borrow::Borrow, collections::HashMap, ops::Deref, rc::Rc};
 
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall, Ident, RExpr},
@@ -142,6 +142,83 @@ fn list_map() -> RExpr {
     .into()
 }
 
+fn list_fold() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
+        let list = local_scope.get(&ident("list"));
+        let function = local_scope.get(&ident("function"));
+        let init = local_scope.get(&ident("init"));
+        match (list.map(|v| v.borrow()), function.borrow(), init.borrow()) {
+            (Some(Expr::List(list)), Some(function), Some(init)) => {
+                let mut value = (*init).clone();
+                for elem in list {
+                    value = Expr::FunctionCall(FunctionCall {
+                        function: (*function).clone(),
+                        arguments: vec![value.clone(), elem.clone()],
+                    })
+                    .into();
+                }
+                value
+            }
+            (Some(a), Some(b), Some(c))
+                if a.is_realized() && b.is_realized() && c.is_realized() =>
+            {
+                panic!(
+                    "Expected List, Function and *O, got {:?}, {:?} and {:?}",
+                    a, b, c
+                )
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }).into(),
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    Expr::Function(Function {
+        arguments: vec![
+            ArgDef {
+                name: ident("list"),
+                typ: TypeName::Normal(NormalTypeName {
+                    name: ident("List"),
+                    subtype: Some(Box::new(NormalTypeName {
+                        name: ident("*I"),
+                        subtype: None,
+                    })),
+                }),
+            },
+            ArgDef {
+                name: ident("function"),
+                typ: TypeName::Function(FunctionTypeName {
+                    args: vec![
+                        NormalTypeName {
+                            name: ident("*O"),
+                            subtype: None,
+                        },
+                        NormalTypeName {
+                            name: ident("*I"),
+                            subtype: None,
+                        },
+                    ],
+                    return_type: NormalTypeName {
+                        name: ident("*O"),
+                        subtype: None,
+                    },
+                }),
+            },
+            ArgDef {
+                name: ident("init"),
+                typ: TypeName::Normal(NormalTypeName {
+                    name: ident("*O"),
+                    subtype: None,
+                }),
+            },
+        ],
+        return_type: TypeName::Normal(NormalTypeName {
+            name: ident("*O"),
+            subtype: None,
+        }),
+        body: Rc::new(Expr::BuiltInFunction(bif)),
+    })
+    .into()
+}
+
 fn list_get() -> RExpr {
     fn body(local_scope: &ScopeMap) -> RExpr {
         let list = local_scope.get(&ident("list"));
@@ -248,6 +325,7 @@ pub fn scope_with_builtin_functions() -> ScopeMap {
         (ident("double"), double()),
         (ident("int_to_str"), int_to_str()),
         (ident("list_map"), list_map()),
+        (ident("list_fold"), list_fold()),
         (ident("list_get"), list_get()),
         (ident("list_size"), list_size()),
         (ident("sin"), sin()),
@@ -271,6 +349,10 @@ pub fn builtin_function_type_definitions(
         (
             ident("list_map"),
             Type::from_function_def_unchecked(&list_map(), type_definitions).unwrap(),
+        ),
+        (
+            ident("list_fold"),
+            Type::from_function_def_unchecked(&list_fold(), type_definitions).unwrap(),
         ),
         (
             ident("list_get"),
