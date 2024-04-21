@@ -62,7 +62,8 @@ fn main() {
     // first type check pass
     for def in &exprs {
         if matches!(def.body.borrow(), ast::Expr::Function(_)) {
-            let typ = typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+            let typ =
+                typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions).unwrap();
             global_scope_types.insert(def.name.clone(), typ.clone());
         }
         let typ = dbg!(typ_check::check(
@@ -80,7 +81,8 @@ fn main() {
     // second type check pass, with global scope
     for def in &exprs {
         if matches!(def.body.borrow(), ast::Expr::Function(_)) {
-            let typ = typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions);
+            let typ =
+                typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions).unwrap();
             global_scope_types.insert(def.name.clone(), typ.clone());
         }
         let typ = dbg!(typ_check::check(
