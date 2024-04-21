@@ -18,6 +18,7 @@
     import Modal from "./Modal.svelte";
     import StickyHeader from "./StickyHeader.svelte";
     import CloseDialogButton from "./CloseDialogButton.svelte";
+    import Footer from "./Footer.svelte";
 
     function full_reload_() {
         let source = get_code();
@@ -88,11 +89,13 @@
     </div>
 </div>
 
+<Footer />
+
 <Modal bind:showModal>
     <StickyHeader>
         <div id="modal-header">
             <h1 id="header-h1">VVC Manual</h1>
-                <CloseDialogButton onclick={() => (showModal = false)} />
+            <CloseDialogButton onclick={() => (showModal = false)} />
         </div>
     </StickyHeader>
 
