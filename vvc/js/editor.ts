@@ -51,6 +51,8 @@ const theme = EditorView.theme(
             fontWeight: "bold",
             border: "1px solid #ff7d00",
             padding: "0.5rem",
+            overflow: "auto",
+            resize: "both",
         },
         ".cm-content": {
             caretColor: "#ff7d00",
