@@ -1,3 +1,7 @@
+<script>
+    import Code from "./Code.svelte";
+</script>
+
 <div id="manual">
     <h2>Overview</h2>
     <p>
@@ -53,10 +57,10 @@
     <p>
         Definitions are just assigning an expression to a name. For example:
         <br />
-        <span class="term">x = 5;</span>
+        <Code>x = 5;</Code>
         <br />
         This will assign
-        <span class="term">5</span> to <span class="term">x</span>;
+        <Code>5</Code> to <Code>x</Code>;
     </p>
     <p>All definitions need to end with a semicolon.</p>
     <p>You can't redefine/shadow definitions!</p>
@@ -69,18 +73,17 @@
     <p><u>A file is just a collection of definitions.</u></p>
     <h4>Basic types</h4>
     <p>
-        The most basic types are <span class="term">Int</span>,
-        <span class="term">Float</span>
+        The most basic types are <Code>Int</Code>,
+        <Code>Float</Code>
         and
-        <span class="term">String</span>. They are what you expect (although
-        <span class="term">String</span>s are pretty useless for now).
+        <Code>String</Code>. They are what you expect (although
+        <Code>String</Code>s are pretty useless for now).
     </p>
     <p>Those types are the building blocks of other types.</p>
     <p>
         Important thing of note is that you can't mix
-        <span class="term">Float</span>s and
-        <span class="term">Int</span>s. They have separate operators (like in
-        OCaml).
+        <Code>Float</Code>s and
+        <Code>Int</Code>s. They have separate operators (like in OCaml).
     </p>
     <h4>Functions</h4>
     <p>
@@ -94,162 +97,157 @@
         returned value and the body is an expression that has arguments in scope
         and evaluates to a value of the return type. Example:
         <br />
-        <span class="term">(a: Int, b: Int) -> Int (a+b)</span>
+        <Code>(a: Int, b: Int) -> Int (a+b)</Code>
         <br />
         This defines a simple function that just adds two
-        <span class="term">Int</span>s. We can assign it to
-        <span class="term">add</span>:
+        <Code>Int</Code>s. We can assign it to
+        <Code>add</Code>:
         <br />
-        <span class="term">add = (a: Int, b: Int) -> Int (a+b);</span>
+        <Code>add = (a: Int, b: Int) -> Int (a+b);</Code>
         <br />
         and then call it:
         <br />
-        <span class="term">add(40,2)</span>
+        <Code>add(40,2)</Code>
         <br />
     </p>
     <h4>Enums and Enum Matching</h4>
     <p>
         Another important "group" of types are
-        <span class="term">Enum</span>s.
+        <Code>Enum</Code>s.
         <br />
-        <span class="term">Enum</span>s here are a form of
+        <Code>Enum</Code>s here are a form of
         <a href="https://en.wikipedia.org/wiki/Tagged_union">tagged unions</a>.
         <br />
         This means that
-        <span class="term">Enum Variants</span> can be defined to hold a value.
+        <Code>Enum Variants</Code> can be defined to hold a value.
     </p>
     <p>
         One example of an
-        <span class="term">Enum</span>
+        <Code>Enum</Code>
         is
-        <span class="term">Option</span>.
+        <Code>Option</Code>.
         <br />
         It has two possible variants:
-        <span class="term">None&#96;</span>
+        <Code>None&#96;</Code>
         and
-        <span class="term">Some&#96; *A</span> (yes, variant names end with
-        backticks).
+        <Code>Some&#96; *A</Code> (yes, variant names end with backticks).
         <br />
-        <span class="term">Some&#96;</span> can hold a value of any type (that's
-        what
-        <span class="term">*A</span>
+        <Code>Some&#96;</Code> can hold a value of any type (that's what
+        <Code>*A</Code>
         means here).
         <br />
         They can be used like so:
         <br />
-        <span class="term">foo = Option::None&#96;;</span>
+        <Code>foo = Option::None&#96;;</Code>
         <br />
-        <span class="term">bar = Option::Some&#96; 5;</span>
+        <Code>bar = Option::Some&#96; 5;</Code>
         <br />
     </p>
     <p>
-        <span class="term">Bool</span> is also an enum. It has two variants,
-        which don't hold values:
-        <span class="term">True&#96;</span> and
-        <span class="term">False&#96;</span>.
+        <Code>Bool</Code> is also an enum. It has two variants, which don't hold
+        values:
+        <Code>True&#96;</Code> and
+        <Code>False&#96;</Code>.
     </p>
     <p>
         Very nice feature that comes with
-        <span class="term">Enum</span>s is
-        <span class="term">Enum Matching</span>.
+        <Code>Enum</Code>s is
+        <Code>Enum Matching</Code>.
         <br />
         It is a subset of pattern matching found in other languages. With that, you
         can have conditional logic, based on the
-        <span class="term">Enum Variant</span>.
+        <Code>Enum Variant</Code>.
         <br />
     </p>
     <p>
         Let's see an example:
         <br />
-        <span class="term">? bar | Some&#96; v => v; | None&#96; => 5;</span>
+        <Code>? bar | Some&#96; v => v; | None&#96; => 5;</Code>
         <br />
         We are matching on the value of
-        <span class="term">bar</span>. Let's assume
-        <span class="term">bar</span> is of type
-        <span class="term">Option&lt;Int&gt;</span> (so the
-        <span class="term">Some&#96;</span> holds an
-        <span class="term">Int</span>, we'll elaborate on that later).
+        <Code>bar</Code>. Let's assume
+        <Code>bar</Code> is of type
+        <Code>Option&lt;Int&gt;</Code> (so the
+        <Code>Some&#96;</Code> holds an
+        <Code>Int</Code>, we'll elaborate on that later).
         <br />
         First branch matches
-        <span class="term">Variant Some&#96;</span> and returns the value
-        inside.
+        <Code>Variant Some&#96;</Code> and returns the value inside.
         <br />
         Second branch matches
-        <span class="term">Variant None&#96;</span> and returns
-        <span class="term">5</span>.
+        <Code>Variant None&#96;</Code> and returns
+        <Code>5</Code>.
         <br />
         As you can see, both branches return a value of the same type.
     </p>
     <p>
         You can also create a catch-all branch:
         <br />
-        <span class="term">| x => &#123;...};</span>
+        <Code>| x => &#123;...};</Code>
         <br />
         This branch will match any value and
-        <span class="term">x</span> will have the value of the expression which
-        you were matching on (so in previous example that would be the value of
-        <span class="term">bar</span>
+        <Code>x</Code> will have the value of the expression which you were matching
+        on (so in previous example that would be the value of
+        <Code>bar</Code>
         ).
     </p>
     <p>
-        <span class="term">Enum Matching</span> can be used with
-        <span class="term">Bool</span> as if-else-statements.
+        <Code>Enum Matching</Code> can be used with
+        <Code>Bool</Code> as if-else-statements.
     </p>
     <p>
         Here's how you can define your own
-        <span class="term">Enum</span> type:
+        <Code>Enum</Code> type:
         <br />
-        <span class="term">PlayerAction : | Jump&#96; | Move&#96; Float;</span>
+        <Code>PlayerAction : | Jump&#96; | Move&#96; Float;</Code>
         <br />
     </p>
     <p>
         Note: currently it's not possible to define
-        <span class="term">Enum</span>s that are generic over the value they
-        hold.
+        <Code>Enum</Code>s that are generic over the value they hold.
     </p>
     <h4>Records</h4>
     <p>
-        <span class="term">Record</span>s are objects that can hold multiple
-        values of different types, which can be accessed by name.
+        <Code>Record</Code>s are objects that can hold multiple values of
+        different types, which can be accessed by name.
         <br />
-        <span class="term">user = &lt; name = "John"; age = 42;&gt;;</span>
+        <Code>user = &lt; name = "John"; age = 42;&gt;;</Code>
         <br />
         You can access the member like so:
         <br />
-        <span class="term">@user.name</span>
+        <Code>@user.name</Code>
         <br />
         It also works for nested records:
         <br />
-        <span class="term">@@player.speed.x</span>
+        <Code>@@player.speed.x</Code>
         <br />
         (Yes, you need a
-        <span class="term">@</span>
+        <Code>@</Code>
         for every level of access. It's a bit unwieldy, but it's a limitation of
         the current parser. It will be addressed one day. )
     </p>
     <p>
         You will also need to define your own
-        <span class="term">Record Type</span>s. Here's how it would look like
-        for the
-        <span class="term">user</span>:
+        <Code>Record Type</Code>s. Here's how it would look like for the
+        <Code>user</Code>:
         <br />
-        <span class="term">User : &lt; name: String, age: Int &gt;;</span>
+        <Code>User : &lt; name: String, age: Int &gt;;</Code>
         <br />
     </p>
     <h4>Lists</h4>
     <p>
         Final type on our list (pun intended) is
-        <span class="term">List</span>.
+        <Code>List</Code>.
         <br />
         Syntax for creating them looks like this:
         <br />
-        <span class="term">scores = [1,5,16234];</span>
+        <Code>scores = [1,5,16234];</Code>
         <br />
     </p>
     <p>Functions for working with lists are:</p>
     <ul>
         <li>
-            <span class="term">list_size: (List&lt;*A&gt;) -&gt; Int</span>
+            <Code>list_size: (List&lt;*A&gt;) -&gt; Int</Code>
             — for getting the size of the list
         </li>
         <li>
@@ -275,7 +273,7 @@
         For example, to use a list of integers in a type definition, you would
         do it like this:
         <br />
-        <span class="term">Game : &lt; scores: List&lt;Int&gt; &gt;;</span>
+        <Code>Game : &lt; scores: List&lt;Int&gt; &gt;;</Code>
         <br />
     </p>
     <p>
@@ -290,43 +288,41 @@
     <p>The game loop looks roughly like this:</p>
     <p>
         When the game starts, the
-        <span class="term">Game State</span>
-        is initialized to the <span class="term">init</span> value.
+        <Code>Game State</Code>
+        is initialized to the <Code>init</Code> value.
     </p>
     <p>
-        On every frame <span class="term">update_handler</span> function is
-        called. It receives current
-        <span class="term">Game State</span>
+        On every frame <Code>update_handler</Code> function is called. It receives
+        current
+        <Code>Game State</Code>
         and time delta; and returns new
-        <span class="term">Game State</span>
-        and <span class="term">Commands</span>.
+        <Code>Game State</Code>
+        and <Code>Commands</Code>.
     </p>
     <p>
         When an event happens (such as key being pressed)
-        <span class="term">event_handler</span> function is called. It receives
-        current
-        <span class="term">Game State</span>
+        <Code>event_handler</Code> function is called. It receives current
+        <Code>Game State</Code>
         and the
-        <span class="term">Event</span>; and returns new
-        <span class="term">Game State</span>
-        and <span class="term">Commands</span>.
+        <Code>Event</Code>; and returns new
+        <Code>Game State</Code>
+        and <Code>Commands</Code>.
     </p>
     <p>
-        <span class="term">Game State</span> can only be modified by changing
-        the returned value. Visuals can be only drawn through the returned
-        <span class="term">Commands</span>.
+        <Code>Game State</Code> can only be modified by changing the returned value.
+        Visuals can be only drawn through the returned
+        <Code>Commands</Code>.
     </p>
     <h3>Commands</h3>
     <p>
-        <span class="term">Commands</span> are the way of interacting with the console.
+        <Code>Commands</Code> are the way of interacting with the console.
     </p>
     <p>
         Currently, the only command provided is
-        <span class="term">DrawLine</span> command, which draws a straight line
-        between two points.
+        <Code>DrawLine</Code> command, which draws a straight line between two points.
         <br />
         It takes a value of type
-        <span class="term">&lt; start: Vec2, end: Vec2 &gt;</span>.
+        <Code>&lt; start: Vec2, end: Vec2 &gt;</Code>.
     </p>
 
     <h3 id="game-state">Game State</h3>
