@@ -82,6 +82,46 @@
     <Code>Float</Code>s and
     <Code>Int</Code>s. They have separate operators (like in OCaml).
   </p>
+  <h4>Binary Operators</h4>
+  <p>Binary operators take two values and return a new value.</p>
+  <p>
+    The use of a binary operator needs to be surrounded by parentheses. This
+    makes it explicit and avoids ambiguity.
+  </p>
+  <p>
+    For example:
+    <br />
+    <Code>(40 + 2)</Code>
+    <br />
+    or
+    <br />
+    <Code>(3 * (3 * 3))</Code>
+    <br />
+  </p>
+  <p>Currently implemented operators:</p>
+  <ul>
+    <li>
+      <Code>+ - * / %</Code> — mathematical operations on <Code>Int</Code>s
+    </li>
+    <li>
+      <Code>&lt; &gt; ==</Code> — <Code>Int</Code> comparisons
+    </li>
+    <li>
+      <Code>+. -. *. /.</Code> — mathematical operations on <Code>Float</Code>s
+    </li>
+    <li>
+      <Code>&lt;. &gt;. ==.</Code> — <Code>Float</Code> comparisons
+    </li>
+    <li>
+      <Code>~</Code> — <Code>String</Code> concatenation
+    </li>
+    <li>
+      <Code>~~</Code> — <Code>List</Code> concatenation
+    </li>
+    <li>
+      <Code>&amp;&amp; ||</Code> — <Code>Bool</Code> operations
+    </li>
+  </ul>
   <h4>Functions</h4>
   <p>
     You can think of functions as just another type. It's a very special type
