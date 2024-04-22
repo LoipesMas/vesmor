@@ -314,6 +314,40 @@ impl Type {
         }
     }
 
+    pub fn fill_type_holes_from_map(self, map: &HashMap<Ident, Type>) -> Self {
+        match self {
+            Type::Hole(i) => {
+                if let Some(t) = map.get(&i) {
+                    t.clone()
+                } else {
+                    Type::Hole(i)
+                }
+            }
+            Type::Simple {
+                ref name,
+                ref subtype,
+            } => match subtype.clone() {
+                Some(subtype) => Type::Simple {
+                    name: name.clone(),
+                    subtype: Some(Box::new(subtype.fill_type_holes_from_map(map))),
+                },
+                None => self,
+            },
+            Type::Record(_) => todo!(),
+            Type::Enum { enu, variants } => {
+                todo!()
+            }
+            Type::Function { args, return_type } => {
+                let args = args
+                    .into_iter()
+                    .map(|a| a.fill_type_holes_from_map(map))
+                    .collect();
+                let return_type = Box::new(return_type.fill_type_holes_from_map(map));
+                Type::Function { args, return_type }
+            }
+        }
+    }
+
     pub fn has_holes(&self) -> bool {
         match self {
             Type::Hole(_) => true,
@@ -605,57 +639,10 @@ pub fn check(
                     }),
                     std::cmp::Ordering::Equal => {
                         if args.iter().any(|a| a.has_holes()) {
-                            // TODO: this is a HACK for builtin functions
-                            if let Expr::Value(ref i) = *fc.function {
-                                // TODO: this is a HACK for list_map typing
-                                match i.0.as_str() {
-                                    "list_map" => {
-                                        let first_arg_type = &call_arg_types[0];
-                                        let second_arg_type = &call_arg_types[1];
-                                        let _ = first_arg_type.matches(&args[0])?;
-                                        let _ = second_arg_type.matches(&args[1])?;
-                                        if let Type::Function {
-                                            args: mapping_fun_args,
-                                            return_type: mapping_fun_ret_type,
-                                        } = second_arg_type
-                                        {
-                                            let mapping_input_type = &mapping_fun_args[0];
-                                            if let Type::Simple { name, subtype } = first_arg_type {
-                                                let subtype = subtype.as_deref().unwrap();
-                                                if mapping_input_type.matches(subtype).is_err() {
-                                                    return Err(format!(
-                                                        "Mapping function expected to take type {subtype} but takes {mapping_input_type}"
-                                                    ));
-                                                }
+                            //TODO: check rough matching
 
-                                                Ok(Type::Simple {
-                                                    name: name.clone(),
-                                                    subtype: Some(mapping_fun_ret_type.clone()),
-                                                })
-                                            } else {
-                                                unreachable!("or so I thought")
-                                            }
-                                        } else {
-                                            unreachable!("or so I thought")
-                                        }
-                                    }
-                                    "list_get" => {
-                                        let first_arg_type = &call_arg_types[0];
-                                        let second_arg_type = &call_arg_types[1];
-                                        let _ = first_arg_type.matches(&args[0])?;
-                                        let _ = second_arg_type.matches(&args[1])?;
-                                        if let Type::Simple { name: _, subtype } = first_arg_type {
-                                            let subtype = subtype.as_ref().unwrap();
-                                            Ok(concrete_option_type(*subtype.clone()))
-                                        } else {
-                                            unreachable!("or so I thought")
-                                        }
-                                    }
-                                    _ => Ok(*return_type),
-                                }
-                            } else {
-                                Ok(*return_type)
-                            }
+                            // TODO: add context
+                            typ_check_generic_function(args, *return_type, call_arg_types)
                         } else if call_arg_types.iter().zip(args.iter()).all(|(a, b)| a == b) {
                             Ok(*return_type)
                         } else {
@@ -942,5 +929,314 @@ fn check_bin_opt(
                 ))
             }
         }
+    }
+}
+
+fn checked_extend(
+    mut a: HashMap<Ident, Type>,
+    b: HashMap<Ident, Type>,
+) -> Result<HashMap<Ident, Type>, String> {
+    for (k, v) in b.into_iter() {
+        let prev = a.insert(k.clone(), v.clone());
+        if let Some(prev) = prev {
+            if prev != v {
+                return Err(format!("type mismatch for type '{k}': '{prev}' and '{v}'"));
+            }
+        }
+    }
+    Ok(a)
+}
+
+fn lock_subtypes(generic_type: Type, concrete_type: Type) -> Result<HashMap<Ident, Type>, String> {
+    if !generic_type.has_holes() {
+        return Ok([].into());
+    }
+    use Type::*;
+    match (generic_type, concrete_type.clone()) {
+        (Hole(i), _) => Ok([(i, concrete_type)].into()),
+        (
+            Simple {
+                name: _,
+                subtype: subtype_g,
+            },
+            Simple {
+                name: _,
+                subtype: subtype_c,
+            },
+        ) => {
+            let subtype_g = subtype_g.expect("where hole, huh?");
+            let subtype_c = subtype_c.expect("should match smh");
+            // TODO: add context
+            lock_subtypes((*subtype_g).to_owned(), (*subtype_c).to_owned())
+        }
+        (
+            Function {
+                args: args_g,
+                return_type: ret_type_g,
+            },
+            Function {
+                args: args_c,
+                return_type: ret_type_c,
+            },
+        ) => {
+            if args_g.len() != args_c.len() {
+                return Err("not matching".to_owned());
+            }
+            let mut accum: HashMap<Ident, Type> = HashMap::new();
+            for (arg_g, arg_c) in args_g.iter().zip(args_c.iter()) {
+                // TODO: add context
+                let res = lock_subtypes(arg_g.clone(), arg_c.clone())?;
+                // TODO: add context
+                accum = checked_extend(accum, res)?;
+            }
+            // TODO: add context
+            let res = lock_subtypes((*ret_type_g).clone(), (*ret_type_c).clone())?;
+            // TODO: add context
+            accum = checked_extend(accum, res)?;
+            Ok(accum)
+        }
+        (_, _) => {
+            todo!()
+        }
+    }
+}
+
+fn typ_check_generic_function(
+    args_g: Vec<Type>,
+    ret_type_g: Type,
+    args_c: Vec<Type>,
+) -> Result<Type, String> {
+    let mut hole_mapping: HashMap<Ident, Type> = HashMap::new();
+
+    for (arg_g, arg_c) in args_g.iter().zip(args_c.iter()) {
+        if !arg_g.has_holes() {
+            // nothing to do
+            continue;
+        }
+        if arg_c.has_holes() {
+            todo!("arguments with type holes to generic function")
+        }
+
+        // TODO: add context
+        let arg_c = arg_g.matches(arg_c)?;
+        // TODO: add context
+        let res = lock_subtypes(arg_g.clone(), arg_c)?;
+        hole_mapping = checked_extend(hole_mapping, res)?
+    }
+    let return_type = ret_type_g.fill_type_holes_from_map(&hole_mapping);
+
+    if return_type.has_holes() {
+        todo!(
+            "{}, {:#?}",
+            return_type,
+            hole_mapping.into_iter().collect::<Vec<_>>()
+        )
+    }
+
+    Ok(return_type)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_checked_extend_ok() {
+        let a = [(ident("*A"), int_type())].into();
+        let b = [(ident("*B"), float_type())].into();
+        let res = checked_extend(a, b).unwrap();
+        let exp = [(ident("*A"), int_type()), (ident("*B"), float_type())].into();
+        assert_eq!(res, exp);
+    }
+
+    #[test]
+    fn test_checked_extend_ok_2() {
+        let a = [(ident("*A"), int_type())].into();
+        let b = [(ident("*A"), int_type()), (ident("*B"), float_type())].into();
+        let res = checked_extend(a, b).unwrap();
+        let exp = [(ident("*A"), int_type()), (ident("*B"), float_type())].into();
+        assert_eq!(res, exp);
+    }
+
+    #[test]
+    fn test_checked_extend_err() {
+        let a = [(ident("*A"), int_type())].into();
+        let b = [(ident("*A"), float_type()), (ident("*B"), float_type())].into();
+        let res = checked_extend(a, b).unwrap_err();
+        let exp_msg = "type mismatch for type '*A': 'Int' and 'Float'";
+        assert_eq!(&res, exp_msg);
+    }
+
+    #[test]
+    fn test_lock_subtypes_hole() {
+        let generic_type = Type::Hole(ident("*A"));
+        let concrete_type = int_type();
+        let result = lock_subtypes(generic_type, concrete_type.clone()).unwrap();
+        let res_type = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type, &concrete_type);
+    }
+
+    #[test]
+    fn test_lock_subtypes_subtype() {
+        let generic_type = Type::Simple {
+            name: ident("List"),
+            subtype: Some(Box::new(Type::Hole(ident("*A")))),
+        };
+        let concrete_type = concrete_list_type(float_type());
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        let res_type = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type, &float_type());
+    }
+
+    #[test]
+    fn test_lock_subtypes_noop() {
+        let generic_type = float_type();
+        let concrete_type = float_type();
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        assert!(result.is_empty())
+    }
+
+    #[test]
+    fn test_lock_subtypes_func_arg() {
+        let generic_type = Type::Function {
+            args: vec![Type::Hole(ident("*A"))],
+            return_type: Box::new(float_type()),
+        };
+        let concrete_type = Type::Function {
+            args: vec![int_type()],
+            return_type: Box::new(float_type()),
+        };
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        let res_type = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type, &int_type());
+    }
+    #[test]
+    fn test_lock_subtypes_func_ret() {
+        let generic_type = Type::Function {
+            args: vec![],
+            return_type: Box::new(Type::Hole(ident("*A"))),
+        };
+        let concrete_type = Type::Function {
+            args: vec![],
+            return_type: Box::new(float_type()),
+        };
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        let res_type = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type, &float_type());
+    }
+    #[test]
+    fn test_lock_subtypes_func_args() {
+        let generic_type = Type::Function {
+            args: vec![Type::Hole(ident("*A")), Type::Hole(ident("*B"))],
+            return_type: Box::new(float_type()),
+        };
+        let concrete_type = Type::Function {
+            args: vec![int_type(), string_type()],
+            return_type: Box::new(float_type()),
+        };
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        let res_type_a = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type_a, &int_type());
+        let res_type_b = result.get(&ident("*B")).unwrap();
+        assert_eq!(res_type_b, &string_type());
+    }
+    #[test]
+    fn test_lock_subtypes_func_args_and_ret() {
+        let generic_type = Type::Function {
+            args: vec![Type::Hole(ident("*A")), Type::Hole(ident("*B"))],
+            return_type: Box::new(Type::Hole(ident("*C"))),
+        };
+        let concrete_type = Type::Function {
+            args: vec![int_type(), string_type()],
+            return_type: Box::new(float_type()),
+        };
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        let res_type_a = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type_a, &int_type());
+        let res_type_b = result.get(&ident("*B")).unwrap();
+        assert_eq!(res_type_b, &string_type());
+        let res_type_c = result.get(&ident("*C")).unwrap();
+        assert_eq!(res_type_c, &float_type());
+    }
+    #[test]
+    fn test_lock_subtypes_func_args_same_ok() {
+        let generic_type = Type::Function {
+            args: vec![Type::Hole(ident("*A")), Type::Hole(ident("*A"))],
+            return_type: Box::new(float_type()),
+        };
+        let concrete_type = Type::Function {
+            args: vec![int_type(), int_type()],
+            return_type: Box::new(float_type()),
+        };
+        let result = lock_subtypes(generic_type, concrete_type).unwrap();
+        let res_type_a = result.get(&ident("*A")).unwrap();
+        assert_eq!(res_type_a, &int_type());
+        assert!(result.get(&ident("*B")).is_none())
+    }
+    #[test]
+    fn test_lock_subtypes_func_args_same_err() {
+        let generic_type = Type::Function {
+            args: vec![Type::Hole(ident("*B")), Type::Hole(ident("*B"))],
+            return_type: Box::new(float_type()),
+        };
+        let concrete_type = Type::Function {
+            args: vec![int_type(), string_type()],
+            return_type: Box::new(float_type()),
+        };
+        let result = lock_subtypes(generic_type, concrete_type).unwrap_err();
+        let exp_msg = "type mismatch for type '*B': 'Int' and 'String'";
+        assert_eq!(&result, exp_msg);
+    }
+
+    #[test]
+    fn test_typ_check_generic_function_a() {
+        let def_args = vec![Type::Hole(ident("*A"))];
+        let def_ret = Type::Hole(ident("*A"));
+        let use_args = vec![int_type()];
+        let res = typ_check_generic_function(def_args, def_ret, use_args).unwrap();
+        assert_eq!(res, int_type());
+    }
+
+    #[test]
+    fn test_typ_check_generic_function_b() {
+        let def_args = vec![concrete_list_type(Type::Hole(ident("*B")))];
+        let def_ret = Type::Hole(ident("*B"));
+        let use_args = vec![concrete_list_type(float_type())];
+        let res = typ_check_generic_function(def_args, def_ret, use_args).unwrap();
+        assert_eq!(res, float_type());
+    }
+
+    #[test]
+    fn test_typ_check_generic_function_c() {
+        let map_f_def = Type::Function {
+            args: vec![Type::Hole(ident("*A"))],
+            return_type: Box::new(Type::Hole(ident("*B"))),
+        };
+        let def_args = vec![concrete_list_type(Type::Hole(ident("*A"))), map_f_def];
+        let def_ret = concrete_list_type(Type::Hole(ident("*B")));
+        let map_f_use = Type::Function {
+            args: vec![int_type()],
+            return_type: Box::new(float_type()),
+        };
+        let use_args = vec![concrete_list_type(int_type()), map_f_use];
+        let res = typ_check_generic_function(def_args, def_ret, use_args).unwrap();
+        assert_eq!(res, concrete_list_type(float_type()));
+    }
+
+    #[test]
+    fn test_typ_check_generic_function_d() {
+        let map_f_def = Type::Function {
+            args: vec![Type::Hole(ident("*A"))],
+            return_type: Box::new(Type::Hole(ident("*B"))),
+        };
+        let def_args = vec![concrete_list_type(Type::Hole(ident("*A"))), map_f_def];
+        let def_ret = concrete_list_type(Type::Hole(ident("*B")));
+        let map_f_use = Type::Function {
+            args: vec![float_type()],
+            return_type: Box::new(float_type()),
+        };
+        let use_args = vec![concrete_list_type(int_type()), map_f_use];
+        let res = typ_check_generic_function(def_args, def_ret, use_args).unwrap_err();
+        assert_eq!(&res, "type mismatch for type '*A': 'Int' and 'Float'");
     }
 }

@@ -36,8 +36,8 @@ fib = (n: Int) -> Int {
     };
 };
 
-main = (a: Bool, b: Int) -> List<Int> {
+main = (a: Bool, b: Int) -> Int {
     x = [1,2,3];
-    mul = (a: Int, b: Int) -> Int (a * b);
-    list_fold(x, mul, 1)
+    mul = (a: Int, b: Int) -> Int (fib((a*b)) * b);
+    list_fold(x, mul, 0)
 };
