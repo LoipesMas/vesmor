@@ -44,17 +44,36 @@ draw_line = (start: Vec2, end: Vec2) -> Command {
     Command::DrawLine` < start = start; end = end; >
 };
 
+DrawLinesAccum : < commands: List<Command>, prev_point: Option<Vec2>>;
+draw_lines = (points: List<Vec2>) -> List<Command> {
+    f = (accum: DrawLinesAccum, point: Vec2) -> DrawLinesAccum {
+        new_commands = ? @accum.prev_point
+            | None` => [];
+            | Some` prev_point => [draw_line(prev_point, point)];
+            ;
+        < commands = (@accum.commands ~~ new_commands); prev_point = Option::Some` point;>  
+    };
+    init_accum = {
+        init_f = () -> DrawLinesAccum < commands = []; prev_point = Option::None`;>;
+        init_f()
+    };
+    @list_fold(points, f, init_accum).commands
+};
+
+draw_lines_loop = (points: List<Vec2>) -> List<Command> {
+    looped_points = ? list_get(points, 0)
+        | Some` p => (points ~~ [p]);
+        | None` => points;
+        ;
+    draw_lines(looped_points)
+};
+
 draw_rect = (center: Vec2, size: Vec2) -> List<Command> {
     bot_left = < x = (@center.x +. @size.x); y = (@center.y -. @size.y); > ;
     top_left = < x = (@center.x +. @size.x); y = (@center.y +. @size.y); > ;
     top_right = < x = (@center.x -. @size.x); y = (@center.y +. @size.y); > ;
     bot_right = < x = (@center.x -. @size.x); y = (@center.y -. @size.y); > ;
-    [
-        draw_line(bot_left, top_left),
-        draw_line(top_left, top_right),
-        draw_line(top_right, bot_right),
-        draw_line(bot_right, bot_left),
-    ]
+    draw_lines_loop([bot_left, top_left, top_right, bot_right])
 };
 
 draw_box = (center: Vec2, size: Float) -> List<Command> draw_rect(center, vec2(size, size));
