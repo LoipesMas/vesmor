@@ -335,7 +335,17 @@ impl Type {
             },
             Type::Record(_) => todo!(),
             Type::Enum { enu, variants } => {
-                todo!()
+                let mut new_variants = variants.clone();
+                for (k, variant) in variants {
+                    if let Some(v) = variant {
+                        new_variants.insert(k, Some(v.fill_type_holes_from_map(map)));
+                    };
+                }
+
+                Type::Enum {
+                    enu,
+                    variants: new_variants,
+                }
             }
             Type::Function { args, return_type } => {
                 let args = args
@@ -1238,5 +1248,55 @@ mod test {
         let use_args = vec![concrete_list_type(int_type()), map_f_use];
         let res = typ_check_generic_function(def_args, def_ret, use_args).unwrap_err();
         assert_eq!(&res, "type mismatch for type '*A': 'Int' and 'Float'");
+    }
+
+    #[test]
+    fn test_fill_types_holes_from_map_hole() {
+        let map = [(ident("*I"), int_type())].into();
+        let typ = Type::Hole(ident("*I"));
+
+        let res = typ.fill_type_holes_from_map(&map);
+
+        let exp = int_type();
+        assert_eq!(res, exp)
+    }
+
+    #[test]
+    fn test_fill_types_holes_from_map_simple() {
+        let map = [(ident("*I"), int_type())].into();
+        let typ = concrete_list_type(Type::Hole(ident("*I")));
+
+        let res = typ.fill_type_holes_from_map(&map);
+
+        let exp = concrete_list_type(int_type());
+        assert_eq!(res, exp)
+    }
+
+    #[test]
+    fn test_fill_types_holes_from_map_enum() {
+        let map = [(ident("*I"), int_type())].into();
+        let typ = concrete_option_type(Type::Hole(ident("*I")));
+
+        let res = typ.fill_type_holes_from_map(&map);
+
+        let exp = concrete_option_type(int_type());
+        assert_eq!(res, exp)
+    }
+
+    #[test]
+    fn test_fill_types_holes_from_map_func() {
+        let map = [(ident("*I"), int_type()), (ident("*O"), float_type())].into();
+        let typ = Type::Function {
+            args: vec![Type::Hole(ident("*I")), string_type()],
+            return_type: Box::new(Type::Hole(ident("*O"))),
+        };
+
+        let res = typ.fill_type_holes_from_map(&map);
+
+        let exp = Type::Function {
+            args: vec![int_type(), string_type()],
+            return_type: Box::new(float_type()),
+        };
+        assert_eq!(res, exp)
     }
 }
