@@ -124,7 +124,7 @@ fn list_map() -> RExpr {
                         subtype: None,
                     }],
                     return_type: NormalTypeName {
-                        name: ident("*I"),
+                        name: ident("*O"),
                         subtype: None,
                     },
                 }),
