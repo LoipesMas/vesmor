@@ -110,6 +110,8 @@ export function get_code(): string | undefined {
 export function set_code(code: string) {
     if (view) {
         view.setState(state_from_code(code));
+        const t = view.state.update({ effects: [EditorView.scrollIntoView(0)] })
+        view.update([t]);
     }
 }
 
