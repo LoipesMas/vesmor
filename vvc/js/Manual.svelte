@@ -134,13 +134,13 @@
     value and the body is an expression that has arguments in scope and
     evaluates to a value of the return type. Example:
     <br />
-    <Code>(a: Int, b: Int) -> Int (a+b)</Code>
+    <Code>(a: Int, b: Int) -&gt; Int (a+b)</Code>
     <br />
     This defines a simple function that just adds two
     <Code>Int</Code>s. We can assign it to
     <Code>add</Code>:
     <br />
-    <Code>add = (a: Int, b: Int) -> Int (a+b);</Code>
+    <Code>add = (a: Int, b: Int) -&gt; Int (a+b);</Code>
     <br />
     and then call it:
     <br />
@@ -165,28 +165,28 @@
     <Code>Option</Code>.
     <br />
     It has two possible variants:
-    <Code>None&#96;</Code>
+    <Code>None&grave;</Code>
     and
-    <Code>Some&#96; *A</Code> (yes, variant names end with backticks).
+    <Code>Some&grave; *A</Code> (yes, variant names end with backticks).
     <br />
-    <Code>Some&#96;</Code> can hold a value of any type (that's what
+    <Code>Some&grave;</Code> can hold a value of any type (that's what
     <Code>*A</Code>
     means here).
     <br />
     They can be used like so:
     <br />
-    <Code>foo = Option::None&#96;;</Code>
+    <Code>foo = Option::None&grave;;</Code>
     <br />
-    <Code>bar = Option::Some&#96; 5;</Code>
+    <Code>bar = Option::Some&grave; 5;</Code>
     <br />
   </p>
   <p>
     <Code>Bool</Code> is also an enum. It has two variants, which don't hold values:
-    <Code>True&#96;</Code> and
-    <Code>False&#96;</Code>.
+    <Code>True&grave;</Code> and
+    <Code>False&grave;</Code>.
   </p>
   <p>
-    Very nice feature that comes with
+    A nice feature that comes with
     <Code>Enum</Code>s is
     <Code>Enum Matching</Code>.
     <br />
@@ -198,20 +198,20 @@
   <p>
     Let's see an example:
     <br />
-    <Code>? bar | Some&#96; v => v; | None&#96; => 5;</Code>
+    <Code>? bar | Some&grave; v =&gt; v; | None&grave; =&gt; 5;</Code>
     <br />
     We are matching on the value of
     <Code>bar</Code>. Let's assume
     <Code>bar</Code> is of type
     <Code>Option&lt;Int&gt;</Code> (so the
-    <Code>Some&#96;</Code> holds an
+    <Code>Some&grave;</Code> holds an
     <Code>Int</Code>, we'll elaborate on that later).
     <br />
     First branch matches
-    <Code>Variant Some&#96;</Code> and returns the value inside.
+    <Code>Variant Some&grave;</Code> and returns the value inside.
     <br />
     Second branch matches
-    <Code>Variant None&#96;</Code> and returns
+    <Code>Variant None&grave;</Code> and returns
     <Code>5</Code>.
     <br />
     As you can see, both branches return a value of the same type.
@@ -219,7 +219,7 @@
   <p>
     You can also create a catch-all branch:
     <br />
-    <Code>| x => &#123;...};</Code>
+    <Code>| x =&gt; &lbrace;...&rbrace;</Code>
     <br />
     This branch will match any value and
     <Code>x</Code> will have the value of the expression which you were matching
@@ -235,7 +235,7 @@
     Here's how you can define your own
     <Code>Enum</Code> type:
     <br />
-    <Code>PlayerAction : | Jump&#96; | Move&#96; Float;</Code>
+    <Code>PlayerAction : | Jump&grave; | Move&grave; Float;</Code>
     <br />
   </p>
   <p>
