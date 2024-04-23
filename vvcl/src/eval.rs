@@ -93,7 +93,7 @@ pub fn beta_reduction(global_scope: &ScopeMap, local_scope: &ScopeMap, e: &RExpr
             };
             if let Expr::Function(fun) = function.borrow() {
                 let reduced_args = Vec::from_iter(fc.arguments.iter().map(brl));
-                if reduced_args.is_empty() {
+                if reduced_args.is_empty() && !fun.arguments.is_empty() {
                     println!("not reducing FunctionCall, because no arguments passed!");
                     e.clone()
                 } else if !reduced_args
