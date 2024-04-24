@@ -11,6 +11,7 @@ use nannou::{
 };
 use vvcl::{
     ast::Ident,
+    parse::ParseError,
     typ_check::{float_type, Type},
     utils::{enum_variant, ident, ErrWithContext},
 };
@@ -55,8 +56,13 @@ const DEFAULT_VIEWPORT_SIZE: (u32, u32) = (720, 720);
 // used in web build
 #[allow(dead_code)]
 pub fn check_source_code(code: &str) -> Result<(), String> {
-    let contents = vvcl::utils::wrap_in_span(&code);
-    let (input, defs) = vvcl::parse::top_definitions(contents).map_err(|e| e.to_string())?;
+    let contents = vvcl::utils::wrap_in_span(code);
+    let (input, defs) = vvcl::parse::top_definitions(contents).map_err(|e| match e {
+        ParseError::Failure(e) | ParseError::Error(e) => {
+            format!("Syntax error in definition at line {}", e.0.location_line())
+        }
+        ParseError::Incomplete(_) => unreachable!("only complete parsers used"),
+    })?;
 
     if !input.is_empty() {
         return Err(format!("parsing failed! input left:\n{input}"));
