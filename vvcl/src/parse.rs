@@ -10,6 +10,7 @@ use nom::{
         is_alphabetic,
     },
     combinator::{all_consuming, map, map_res, opt, recognize},
+    error::ErrorKind,
     multi::{many0, many0_count, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     IResult,
@@ -29,7 +30,8 @@ use crate::{typ_check::NormalTypeName, utils::map_from_defs};
 
 type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
 
-type PResult<'a, O> = IResult<Span<'a>, O>;
+pub type ParseError<'a> = nom::Err<(Span<'a>, ErrorKind)>;
+type PResult<'a, O> = Result<(Span<'a>, O), ParseError<'a>>;
 
 fn ws<'a, F: 'a, O, E: nom::error::ParseError<Span<'a>>>(
     inner: F,
