@@ -26,10 +26,6 @@ fn main() {
     let file_path = "./test.vvc";
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
-    // FIXME: this also removes spaces inside strings...
-    // and leaving it in will probably make it easier to show parser errors
-    let contents = contents.replace(['\n', ' '], "");
-
     let input = wrap_in_span(&contents);
     let (input, defs) = parse::top_definitions(input).unwrap();
 

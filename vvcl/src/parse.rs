@@ -5,7 +5,10 @@ use std::rc::Rc;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while},
-    character::{complete::alphanumeric1, is_alphabetic},
+    character::{
+        complete::{alphanumeric1, multispace0},
+        is_alphabetic,
+    },
     combinator::{all_consuming, map, map_res, opt, recognize},
     multi::{many0, many0_count, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
@@ -28,6 +31,15 @@ type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
 
 type PResult<'a, O> = IResult<Span<'a>, O>;
 
+fn ws<'a, F: 'a, O, E: nom::error::ParseError<Span<'a>>>(
+    inner: F,
+) -> impl FnMut(Span<'a>) -> IResult<Span<'a>, O, E>
+where
+    F: FnMut(Span<'a>) -> IResult<Span<'a>, O, E>,
+{
+    delimited(multispace0, inner, multispace0)
+}
+
 fn is_any_of(s: &'static str) -> impl Fn(char) -> bool {
     |e| s.contains([e])
 }
@@ -37,41 +49,42 @@ fn is_valid_ident_char(c: char) -> bool {
 }
 
 fn ident(input: Span) -> PResult<Ident> {
-    map(
+    ws(map(
         recognize(pair(
             alt((nom::character::complete::alpha1, tag("_"))),
             many0_count(alt((alphanumeric1, tag("_")))),
         )),
         |s: Span| Ident(s.to_string()),
-    )(input)
+    ))(input)
 }
 
 fn normal_type_name(input: Span) -> PResult<NormalTypeName> {
-    map(
+    ws(map(
         pair(ident, opt(delimited(tag("<"), normal_type_name, tag(">")))),
         |(name, subtype)| NormalTypeName {
             name,
             subtype: subtype.map(Box::new),
         },
-    )(input)
+    ))(input)
 }
 
 fn function_type_name(input: Span) -> PResult<FunctionTypeName> {
+    // TODO: this is not the way I want it
     map(
         preceded(
             tag("Fun"),
             delimited(
-                tag("<"),
-                separated_pair(
+                ws(tag("<")),
+                ws(separated_pair(
                     delimited(
-                        tag("("),
-                        separated_list0(tag(","), normal_type_name),
-                        tag(")"),
+                        ws(tag("(")),
+                        ws(separated_list0(tag(","), normal_type_name)),
+                        ws(tag(")")),
                     ),
                     tag("->"),
                     normal_type_name,
-                ),
-                tag(">"),
+                )),
+                ws(tag(">")),
             ),
         ),
         |(args, return_type)| FunctionTypeName { args, return_type },
@@ -79,20 +92,20 @@ fn function_type_name(input: Span) -> PResult<FunctionTypeName> {
 }
 
 fn type_name(input: Span) -> PResult<TypeName> {
-    alt((
+    ws(alt((
         map(function_type_name, TypeName::Function),
         map(normal_type_name, TypeName::Normal),
-    ))(input)
+    )))(input)
 }
 
 fn arg_def(input: Span) -> PResult<ArgDef> {
-    let (input, (name, typ)) = separated_pair(ident, tag(":"), type_name)(input)?;
+    let (input, (name, typ)) = separated_pair(ws(ident), ws(tag(":")), ws(type_name))(input)?;
     Ok((input, ArgDef { name, typ }))
 }
 
 fn definition(input: Span) -> PResult<Definition> {
-    let (input, (name, body)) = separated_pair(ident, tag("="), rexpr)(input)?;
-    let (input, _) = tag(";")(input)?;
+    let (input, (name, body)) = separated_pair(ws(ident), ws(tag("=")), ws(rexpr))(input)?;
+    let (input, _) = ws(tag(";"))(input)?;
     Ok((input, Definition { name, body }))
 }
 
@@ -259,9 +272,9 @@ fn enum_pattern(input: Span) -> PResult<EnumPattern> {
 fn enum_matching_branch(input: Span) -> PResult<MatchBranch> {
     map(
         delimited(
-            tag("|"),
-            separated_pair(enum_pattern, tag("=>"), rexpr),
-            tag(";"),
+            ws(tag("|")),
+            separated_pair(ws(enum_pattern), ws(tag("=>")), ws(rexpr)),
+            ws(tag(";")),
         ),
         |(pattern, expr)| MatchBranch { pattern, expr },
     )(input)
@@ -269,7 +282,10 @@ fn enum_matching_branch(input: Span) -> PResult<MatchBranch> {
 
 fn enum_matching_expr(input: Span) -> PResult<Expr> {
     map(
-        preceded(tag("?"), pair(rexpr, many1(enum_matching_branch))),
+        preceded(
+            ws(tag("?")),
+            pair(ws(rexpr), many1(ws(enum_matching_branch))),
+        ),
         |(value, branches)| Expr::EnumMatching(EnumMatching { value, branches }),
     )(input)
 }
@@ -278,11 +294,15 @@ fn fun(input: Span) -> PResult<Function> {
     map(
         pair(
             separated_pair(
-                delimited(tag("("), separated_list0(tag(","), arg_def), tag(")")),
-                tag("->"),
-                normal_type_name,
+                delimited(
+                    ws(tag("(")),
+                    ws(separated_list0(ws(tag(",")), ws(arg_def))),
+                    ws(tag(")")),
+                ),
+                ws(tag("->")),
+                ws(normal_type_name),
             ),
-            rexpr,
+            ws(rexpr),
         ),
         |((arguments, return_type), body)| Function {
             arguments,
@@ -293,11 +313,11 @@ fn fun(input: Span) -> PResult<Function> {
 }
 
 fn fun_expr(input: Span) -> PResult<Expr> {
-    map(fun, Expr::Function)(input)
+    ws(map(fun, Expr::Function))(input)
 }
 
 pub fn expr(input: Span) -> PResult<Expr> {
-    alt((
+    ws(alt((
         fun_expr,
         enum_variant_constructor,
         enum_matching_expr,
@@ -311,7 +331,7 @@ pub fn expr(input: Span) -> PResult<Expr> {
         float_expr,
         int_expr,
         value_expr,
-    ))(input)
+    )))(input)
 }
 
 pub fn rexpr(input: Span) -> PResult<RExpr> {
@@ -319,16 +339,19 @@ pub fn rexpr(input: Span) -> PResult<RExpr> {
 }
 
 fn record_definition(input: Span) -> PResult<RecordTypeName> {
-    map(
+    ws(map(
         delimited(
-            tag("<"),
-            terminated(separated_list1(tag(","), arg_def), opt(tag(","))),
-            tag(">"),
+            ws(tag("<")),
+            ws(terminated(
+                separated_list1(tag(","), ws(arg_def)),
+                opt(ws(tag(","))),
+            )),
+            ws(tag(">")),
         ),
         |members| RecordTypeName {
             members: members.into_iter().map(|a| (a.name, a.typ)).collect(),
         },
-    )(input)
+    ))(input)
 }
 
 fn enum_variant_definition(input: Span) -> PResult<(Ident, Option<TypeName>)> {
@@ -341,7 +364,7 @@ fn enum_variant_definition(input: Span) -> PResult<(Ident, Option<TypeName>)> {
 fn enum_definition(input: Span) -> PResult<TypeDef> {
     map(
         terminated(
-            separated_pair(ident, tag(":"), many1(enum_variant_definition)),
+            separated_pair(ident, tag(":"), many1(ws(enum_variant_definition))),
             tag(";"),
         ),
         |(name, variants)| TypeDef {
@@ -359,13 +382,13 @@ fn type_definition_body(input: Span) -> PResult<TypeName> {
 }
 
 fn type_definition(input: Span) -> PResult<TypeDef> {
-    map(
+    ws(map(
         terminated(
-            separated_pair(ident, tag(":"), type_definition_body),
-            tag(";"),
+            separated_pair(ws(ident), ws(tag(":")), ws(type_definition_body)),
+            ws(tag(";")),
         ),
         |(name, body)| TypeDef { name, body },
-    )(input)
+    ))(input)
 }
 
 pub enum TopLevelDefinition {
@@ -374,9 +397,9 @@ pub enum TopLevelDefinition {
 }
 
 pub fn top_definitions(input: Span) -> PResult<Vec<TopLevelDefinition>> {
-    all_consuming(many0(alt((
+    all_consuming(many0(ws(alt((
         map(definition, TopLevelDefinition::Expr),
         map(type_definition, TopLevelDefinition::Type),
         map(enum_definition, TopLevelDefinition::Type),
-    ))))(input)
+    )))))(input)
 }
