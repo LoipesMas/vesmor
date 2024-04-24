@@ -11,7 +11,7 @@ use nannou::{
 };
 use vvcl::{
     ast::Ident,
-    typ_check::{concrete_list_type, float_type, Type},
+    typ_check::{float_type, Type},
     utils::{enum_variant, ident, ErrWithContext},
 };
 
@@ -55,8 +55,7 @@ const DEFAULT_VIEWPORT_SIZE: (u32, u32) = (720, 720);
 // used in web build
 #[allow(dead_code)]
 pub fn check_source_code(code: &str) -> Result<(), String> {
-    let contents = code.replace(['\n', ' '], "");
-    let contents = vvcl::utils::wrap_in_span(&contents);
+    let contents = vvcl::utils::wrap_in_span(&code);
     let (input, defs) = vvcl::parse::top_definitions(contents).map_err(|e| e.to_string())?;
 
     if !input.is_empty() {
@@ -273,9 +272,6 @@ fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
 fn init_runtime(source_code: &SourceCode) -> Runtime {
     let contents = &source_code.code;
 
-    // FIXME: this also removes spaces inside strings...
-    // and leaving it in will probably make it easier to show parser errors
-    let contents = contents.replace(['\n', ' '], "");
     let contents = vvcl::utils::wrap_in_span(&contents);
     let (input, defs) = vvcl::parse::top_definitions(contents).unwrap();
 
