@@ -12,7 +12,7 @@ use nannou::{
 use vvcl::{
     ast::Ident,
     parse::ParseError,
-    typ_check::{float_type, Type},
+    typ_check::{concrete_list_type, float_type, Type},
     utils::{enum_variant, ident, ErrWithContext},
 };
 
@@ -139,11 +139,7 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
         .ok_or("`event_handler` function should be defined at top-level".to_string())?;
 
     // check event_handler
-    if let Type::Function {
-        args,
-        return_type: _,
-    } = event_function_type
-    {
+    if let Type::Function { args, return_type } = event_function_type {
         if args.len() != 2 {
             return Err(
                 "`event_handler` function should take 2 arguments: game state and event"
@@ -164,8 +160,25 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
                 "Second argument to `event_handler` should be of type Event, got {second_type}."
             ));
         }
-        // TODO: check return type
-        // do this before release pls
+
+        let ret_typ_err_msg =
+            format!("Return type of 'event_handler' should be '< game = GameState; commands = List<Command>;>', got '{return_type}'");
+        if let Type::Record(r) = return_type.borrow() {
+            let game_state_type = r
+                .get(&ident("game"))
+                .ok_or_else(|| ret_typ_err_msg.clone())?;
+            if game_state_type != init_type {
+                return Err(ret_typ_err_msg);
+            }
+            let commands_type = r
+                .get(&ident("commands"))
+                .ok_or_else(|| ret_typ_err_msg.clone())?;
+            if commands_type != &concrete_list_type(command_enum()) {
+                return Err(ret_typ_err_msg);
+            }
+        } else {
+            return Err(ret_typ_err_msg);
+        }
     } else {
         return Err(format!(
             "`event_handler` should be a function, got '{event_function_type}'"
