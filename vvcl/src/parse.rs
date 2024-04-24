@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while},
     character::{complete::alphanumeric1, is_alphabetic},
-    combinator::{map, map_res, opt, recognize},
+    combinator::{all_consuming, map, map_res, opt, recognize},
     multi::{many0, many0_count, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
     IResult,
@@ -374,9 +374,9 @@ pub enum TopLevelDefinition {
 }
 
 pub fn top_definitions(input: Span) -> PResult<Vec<TopLevelDefinition>> {
-    many0(alt((
+    all_consuming(many0(alt((
         map(definition, TopLevelDefinition::Expr),
         map(type_definition, TopLevelDefinition::Type),
         map(enum_definition, TopLevelDefinition::Type),
-    )))(input)
+    ))))(input)
 }
