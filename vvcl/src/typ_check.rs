@@ -1006,6 +1006,7 @@ fn lock_subtypes(generic_type: Type, concrete_type: Type) -> Result<HashMap<Iden
             Ok(accum)
         }
         (_, _) => {
+            // TODO: replace todo!'s with Err
             todo!()
         }
     }
@@ -1024,7 +1025,9 @@ fn typ_check_generic_function(
             continue;
         }
         if arg_c.has_holes() {
-            todo!("arguments with type holes to generic function")
+            return Err(
+                "generic arguments to generic functions are not implemented yet.".to_owned(),
+            );
         }
 
         // TODO: add context
@@ -1036,11 +1039,11 @@ fn typ_check_generic_function(
     let return_type = ret_type_g.fill_type_holes_from_map(&hole_mapping);
 
     if return_type.has_holes() {
-        todo!(
-            "{}, {:#?}",
+        return Err(format!(
+            "Failed to determine return type: {}, {:#?}",
             return_type,
             hole_mapping.into_iter().collect::<Vec<_>>()
-        )
+        ));
     }
 
     Ok(return_type)
