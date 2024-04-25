@@ -259,7 +259,7 @@ fn event_enum() -> Type {
         enu: ident("Key"),
         variants: keys.map(|k| (ident(&format!("{k:?}")), None)).into(),
     };
-    let mut event_variants: HashMap<_, _> = ["KeyPressed", "KeyDown"]
+    let mut event_variants: HashMap<_, _> = ["KeyPressed", "KeyDown", "KeyReleased"]
         .map(|v| (ident(v), Some(keys_enum.clone())))
         .into();
     event_variants.insert(ident("Tick"), Some(float_type()));
@@ -387,6 +387,18 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 
 fn key_released(app: &App, model: &mut Model, key: Key) {
     model.pressed_keys.remove(&key);
+    let key_str = format!("{key:?}");
+    let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
+    let event_enum = vvcl::utils::enum_variant("Event", "KeyReleased", Some(key_enum));
+
+    let (game_state, commands) = run_event_handler(
+        &model.runtime.global_scope,
+        model.runtime.event_function.clone(),
+        model.runtime.game_state.clone(),
+        event_enum,
+    );
+    model.runtime.game_state = game_state;
+    model.commands.extend(commands);
 }
 
 pub fn model(app: &App) -> Model {
