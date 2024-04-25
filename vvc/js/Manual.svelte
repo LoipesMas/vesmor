@@ -315,7 +315,7 @@
   </p>
   <p>
     Right now it's not possible to define your own generic types; or take or
-    return generic types.
+    return generic types in functions.
   </p>
   <h2>Game Loop</h2>
   <p>
@@ -329,14 +329,7 @@
     is initialized to the <Code>init</Code> value.
   </p>
   <p>
-    On every frame <Code>update_handler</Code> function is called. It receives current
-    <Code>Game State</Code>
-    and time delta; and returns new
-    <Code>Game State</Code>
-    and <Code>Commands</Code>.
-  </p>
-  <p>
-    When an event happens (such as key being pressed)
+    When an event happens (such as key being pressed or game-tick happening),
     <Code>event_handler</Code> function is called. It receives current
     <Code>Game State</Code>
     and the
@@ -351,22 +344,85 @@
   </p>
   <h3>Commands</h3>
   <p>
-    <Code>Commands</Code> are the way of interacting with the console.
+    <Code>Command</Code>s are the way to interact with the console.
   </p>
   <p>
-    Currently, the only command provided is
+    <Code>Command</Code>s returned from <Code>event_handler</Code> will be executed
+    for the next frame.
+  </p>
+  <p>
+    Currently, the only <Code>Command</Code> provided is
     <Code>DrawLine</Code> command, which draws a straight line between two points.
     <br />
     It takes a value of type
     <Code>&lt; start: Vec2, end: Vec2 &gt;</Code>.
   </p>
-
-  <h3 id="game-state">Game State</h3>
-  <h3>Update</h3>
+  <h3>Game State</h3>
+  <p>
+    <Code>Game State</Code> contains all the data for your game. So that would include
+    player score, positions of objects, etc.
+  </p>
+  <p>
+    As mentioned, it is initialized to the value of <Code>init</Code> and modified
+    by returning a different value from <Code>event_handler</Code>.
+  </p>
   <h3>Events</h3>
+  <p>Currently available <Code>Event</Code>s are:</p>
+  <ul>
+    <li>
+      <Code>Tick` Float</Code> — fired on every tick/frame of the game. The value
+      inside is time elapsed from last update.
+    </li>
+    <li>
+      <Code>KeyPressed` Key</Code> — fired when key is pressed down (i.e. goes from
+      being not pressed to being pressed).
+      <Code>Key</Code> is an <Code>Enum</Code> with variants for keys A-Z.
+    </li>
+    <li>
+      <Code>KeyReleased` Key</Code> — fired when key is released (i.g. goes from
+      being pressed to not being pressed).
+      <Code>Key</Code> is an <Code>Enum</Code> with variants for keys A-Z.
+    </li>
+    <li>
+      <Code>KeyDown` Key</Code> — fired on every tick/frame for every key that is
+      currently being held down.
+      <Code>Key</Code> is an <Code>Enum</Code> with variants for keys A-Z.
+    </li>
+  </ul>
   <h2>Developing Games</h2>
   <p>
-    TODO: describe how to make games: writing code, checking code, hot/full
-    reloads, sharing code
+    This webpage includes the full devkit for developing games for the console.
+  </p>
+  <p>
+    You can edit the code in the editor, reload it and play it in the embedded
+    console!
+  </p>
+  <p>There are four buttons for interacting with the editor and console:</p>
+  <ul>
+    <li>
+      <Code>Full Reload</Code> — checks the code for errors, loads it into the console
+      and restarts the state. Useful when you make a change that impacts the initial
+      state or makes the game not compatible with the previous state.
+    </li>
+    <li>
+      <Code>Hot Reload</Code> — checks the code for errors, loads it into the console,
+      but doesn't reload the state: the same state is used, preserving any changes.
+      Useful when you make a change that doesn't break the state or you want to fix
+      a specific interaction.
+    </li>
+    <li>
+      <Code>Check Code</Code> — checks the code for errors, without loading it into
+      the console. Useful when you're just messing around.
+    </li>
+    <li>
+      <Code>Reset Code</Code> — resets code to the original state (currently my implementation
+      of Pong). For when you want to start over. <b>Warning:</b> there's no going
+      back.
+    </li>
+  </ul>
+  <p>
+    You <i>may</i> encounter some console crashes. If it happens, you'll need to
+    restart the console, by refreshing the webpage. <b>Warning:</b> please copy your
+    code when refreshing (saving not implemented yet ;])
   </p>
 </div>
