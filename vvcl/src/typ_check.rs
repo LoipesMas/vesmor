@@ -651,8 +651,8 @@ pub fn check(
                         if args.iter().any(|a| a.has_holes()) {
                             //TODO: check rough matching
 
-                            // TODO: add context
                             typ_check_generic_function(args, *return_type, call_arg_types)
+                                .with_context("In function call: ".to_string())
                         } else if call_arg_types.iter().zip(args.iter()).all(|(a, b)| a == b) {
                             Ok(*return_type)
                         } else {
@@ -950,7 +950,7 @@ fn checked_extend(
         let prev = a.insert(k.clone(), v.clone());
         if let Some(prev) = prev {
             if prev != v {
-                return Err(format!("type mismatch for type '{k}': '{prev}' and '{v}'"));
+                return Err(format!("Type mismatch for type '{k}': '{prev}' and '{v}'"));
             }
         }
     }
@@ -976,7 +976,8 @@ fn lock_subtypes(generic_type: Type, concrete_type: Type) -> Result<HashMap<Iden
         ) => {
             let subtype_g = subtype_g.expect("where hole, huh?");
             let subtype_c = subtype_c.expect("should match smh");
-            // TODO: add context
+            // TODO: add context?
+            // not sure if we can provide any useful context here
             lock_subtypes((*subtype_g).to_owned(), (*subtype_c).to_owned())
         }
         (
@@ -994,14 +995,14 @@ fn lock_subtypes(generic_type: Type, concrete_type: Type) -> Result<HashMap<Iden
             }
             let mut accum: HashMap<Ident, Type> = HashMap::new();
             for (arg_g, arg_c) in args_g.iter().zip(args_c.iter()) {
-                // TODO: add context
+                // TODO: add context?
                 let res = lock_subtypes(arg_g.clone(), arg_c.clone())?;
-                // TODO: add context
+                // TODO: add context?
                 accum = checked_extend(accum, res)?;
             }
-            // TODO: add context
+            // TODO: add context?
             let res = lock_subtypes((*ret_type_g).clone(), (*ret_type_c).clone())?;
-            // TODO: add context
+            // TODO: add context?
             accum = checked_extend(accum, res)?;
             Ok(accum)
         }
@@ -1030,11 +1031,13 @@ fn typ_check_generic_function(
             );
         }
 
-        // TODO: add context
-        let arg_c = arg_g.matches(arg_c)?;
-        // TODO: add context
-        let res = lock_subtypes(arg_g.clone(), arg_c)?;
-        hole_mapping = checked_extend(hole_mapping, res)?
+        let arg_c = arg_g
+            .matches(arg_c)
+            .with_context("Mismatch in arguments to a generic function: ".to_string())?;
+        let res = lock_subtypes(arg_g.clone(), arg_c)
+            .with_context("In an argument to a generic function: ".to_string())?;
+        hole_mapping = checked_extend(hole_mapping, res)
+            .with_context("In an argument to a generic function: ".to_string())?
     }
     let return_type = ret_type_g.fill_type_holes_from_map(&hole_mapping);
 
