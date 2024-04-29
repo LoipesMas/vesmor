@@ -165,10 +165,17 @@ bounce_ball_player = (game: Game, side: Side) -> Vec2 {
         | Right` => @game.player_right;
         ;
     ? check_player_ball_collision(@ball.position, player_pos)
-    | True` => ? side
-        | Left` => < new_speed | x = abs(@new_speed.x);>;
-        | Right` => < new_speed | x = neg(abs(@new_speed.x));>;
-        ;
+    | True` => {
+         x_speed = ? side
+             | Left` => abs(@new_speed.x);
+             | Right` => neg(abs(@new_speed.x));
+             ;
+         y_speed = ? (@@ball.position.y >. @player_pos.y)
+             | True` => abs(@new_speed.y);
+             | False` => neg(abs(@new_speed.y));
+             ;
+        < x = x_speed; y = y_speed;>
+        };
     | False` => @ball.speed;
 };
 
@@ -258,4 +265,3 @@ event_handler = (game: Game, event: Event) -> GameAndCommands {
             };
         | _ => < game = game; commands = [];>;
 };
-
