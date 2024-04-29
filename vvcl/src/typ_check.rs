@@ -643,17 +643,48 @@ pub fn check(
                     std::cmp::Ordering::Greater => {
                         Err("Called function with too many arguments".to_string())
                     }
-                    std::cmp::Ordering::Less => Ok(Type::Function {
-                        args: args.into_iter().skip(call_arg_types.len()).collect(),
-                        return_type,
-                    }),
+                    std::cmp::Ordering::Less => {
+                        if args.iter().any(Type::has_holes) {
+                            Err(
+                                "Partial application of generic functions not implemented yet."
+                                    .to_string(),
+                            )
+                        } else if call_arg_types
+                            .iter()
+                            .zip(args.iter())
+                            .all(|(a, b)| a.matches(b).is_ok())
+                        // TODO: ^ collect to result and show exact error
+                        {
+                            Ok(Type::Function {
+                                args: args.into_iter().skip(call_arg_types.len()).collect(),
+                                return_type,
+                            })
+                        } else {
+                            Err(format!(
+                                "Invalid call args, expected {:?}, got {:?}",
+                                args.iter()
+                                    .take(call_arg_types.len())
+                                    .map(|t| t.to_string())
+                                    .collect::<Vec<_>>(),
+                                call_arg_types
+                                    .iter()
+                                    .map(|t| t.to_string())
+                                    .collect::<Vec<_>>()
+                            ))
+                        }
+                    }
                     std::cmp::Ordering::Equal => {
                         if args.iter().any(|a| a.has_holes()) {
                             //TODO: check rough matching
 
                             typ_check_generic_function(args, *return_type, call_arg_types)
                                 .with_context("In function call: ".to_string())
-                        } else if call_arg_types.iter().zip(args.iter()).all(|(a, b)| a == b) {
+                        } else if call_arg_types
+                            .iter()
+                            .zip(args.iter())
+                            .all(|(a, b)| a.matches(b).is_ok())
+                        // TODO: ^ collect to result and show exact error
+                        {
                             Ok(*return_type)
                         } else {
                             Err(format!(
