@@ -422,7 +422,6 @@
   </ul>
   <p>
     You <i>may</i> encounter some console crashes. If it happens, you'll need to
-    restart the console, by refreshing the webpage. <b>Warning:</b> please copy your
-    code when refreshing (saving not implemented yet ;])
+    restart the console, by refreshing the webpage. Your code <i>should</i> be preserved.
   </p>
 </div>

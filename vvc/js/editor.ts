@@ -86,11 +86,28 @@ function state_from_code(code: string): EditorState {
     });
 }
 
-let startState = state_from_code("Loading...");
+const STORAGE_KEY = "source_code"
+
+const PLACEHOLDER_CODE = "Loading..."
+
+export const DEFAULT_CODE_LOCATION = "game.vvc"
+
+const saved_code = localStorage.getItem(STORAGE_KEY)
+
+let startState = state_from_code(saved_code || PLACEHOLDER_CODE);
 
 let output_el: HTMLElement | null = null;
 
 export let view: EditorView | null = null;
+
+function save() {
+    const code = get_code();
+    if (code) {
+        localStorage.setItem(STORAGE_KEY, code)
+    }
+}
+
+setInterval(save, 3000)
 
 export function init() {
     let el = document.getElementById("codemirror-holder");
@@ -100,6 +117,9 @@ export function init() {
             state: startState,
             parent: el,
         });
+    }
+    if (saved_code === null) {
+        reset_code(DEFAULT_CODE_LOCATION)
     }
     return view;
 }
