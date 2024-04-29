@@ -168,7 +168,7 @@ impl Type {
                 },
             ) => {
                 if name_a != name_b {
-                    Err(format!("Types don't match: {self} and {other}"))
+                    Err(format!("Types don't match: '{self}' and '{other}'"))
                 } else {
                     match (subtype_a, subtype_b) {
                         (None, None) => Ok(self.clone()),
@@ -179,7 +179,7 @@ impl Type {
                                     .with_context(format!("In the subtype of {name_a}: "))?,
                             )),
                         }),
-                        _ => Err(format!("Types don't match: {self} and {other}")),
+                        _ => Err(format!("Types don't match: '{self}' and '{other}'")),
                     }
                 }
             }
@@ -194,7 +194,7 @@ impl Type {
                 },
             ) => {
                 if enu_a != enu_b {
-                    Err(format!("Types don't match: {self} and {other}"))
+                    Err(format!("Types don't match: '{self}' and '{other}'"))
                 } else {
                     let mut variants_a_k = variants_a.keys().collect::<Vec<_>>();
                     variants_a_k.sort_by_key(|i| &i.0);
@@ -235,7 +235,7 @@ impl Type {
                 let a_keys = a.keys().collect::<HashSet<_>>();
                 let b_keys = b.keys().collect::<HashSet<_>>();
                 if a_keys != b_keys {
-                    Err(format!("Types don't match: {self} and {other}"))
+                    Err(format!("Types don't match: '{self}' and '{other}'"))
                 } else {
                     let mut new_members = HashMap::new();
                     for key in a_keys {
@@ -262,7 +262,7 @@ impl Type {
                 },
             ) => {
                 if args_a.len() != args_b.len() {
-                    return Err(format!("Types don't match: {self} and {other}"));
+                    return Err(format!("Types don't match: '{self}' and '{other}'"));
                 }
                 let args = args_a
                     .iter()
@@ -278,7 +278,7 @@ impl Type {
                     return_type: Box::new(return_type),
                 })
             }
-            _ => Err(format!("Types don't match: {self} and {other}")),
+            _ => Err(format!("Types don't match: '{self}' and '{other}'")),
         }
     }
 
@@ -394,9 +394,23 @@ impl std::fmt::Display for Type {
                 Ok(())
             }
             Self::Hole(i) => {
-                write!(f, "{i}")
+                write!(f, "*{i}")
             }
-            _ => write!(f, "{self:?}"),
+            Self::Function { args, return_type } => {
+                write!(
+                    f,
+                    "({}) -> {}",
+                    args.iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    return_type
+                )
+            }
+            Self::Enum { enu, variants: _ } => {
+                // TODO: should we display more information here?
+                write!(f, "{enu}")
+            }
         }
     }
 }
@@ -661,15 +675,17 @@ pub fn check(
                             })
                         } else {
                             Err(format!(
-                                "Invalid call args, expected {:?}, got {:?}",
+                                "Invalid call args, expected '{}', got '{}'",
                                 args.iter()
                                     .take(call_arg_types.len())
                                     .map(|t| t.to_string())
-                                    .collect::<Vec<_>>(),
+                                    .collect::<Vec<_>>()
+                                    .join(", "),
                                 call_arg_types
                                     .iter()
                                     .map(|t| t.to_string())
                                     .collect::<Vec<_>>()
+                                    .join(", ")
                             ))
                         }
                     }
@@ -688,12 +704,16 @@ pub fn check(
                             Ok(*return_type)
                         } else {
                             Err(format!(
-                                "Invalid call args, expected {:?}, got {:?}",
-                                args.iter().map(|t| t.to_string()).collect::<Vec<_>>(),
+                                "Invalid call args, expected '{}', got '{}'",
+                                args.iter()
+                                    .map(|t| t.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", "),
                                 call_arg_types
                                     .iter()
                                     .map(|t| t.to_string())
                                     .collect::<Vec<_>>()
+                                    .join(", ")
                             ))
                         }
                     }
@@ -981,7 +1001,9 @@ fn checked_extend(
         let prev = a.insert(k.clone(), v.clone());
         if let Some(prev) = prev {
             if prev != v {
-                return Err(format!("Type mismatch for type '{k}': '{prev}' and '{v}'"));
+                return Err(format!(
+                    "Type conflict for type of '*{k}': '{prev}' and '{v}'"
+                ));
             }
         }
     }
@@ -1051,7 +1073,7 @@ fn typ_check_generic_function(
 ) -> Result<Type, String> {
     let mut hole_mapping: HashMap<Ident, Type> = HashMap::new();
 
-    for (arg_g, arg_c) in args_g.iter().zip(args_c.iter()) {
+    for (i, (arg_g, arg_c)) in args_g.iter().zip(args_c.iter()).enumerate() {
         if !arg_g.has_holes() {
             // nothing to do
             continue;
@@ -1064,11 +1086,11 @@ fn typ_check_generic_function(
 
         let arg_c = arg_g
             .matches(arg_c)
-            .with_context("Mismatch in arguments to a generic function: ".to_string())?;
+            .with_context(format!("Type mismatch for argument #{}: ", i + 1))?;
         let res = lock_subtypes(arg_g.clone(), arg_c)
-            .with_context("In an argument to a generic function: ".to_string())?;
+            .with_context(format!("In argument #{} to a generic function: ", i + 1))?;
         hole_mapping = checked_extend(hole_mapping, res)
-            .with_context("In an argument to a generic function: ".to_string())?
+            .with_context(format!("In argument #{} to a generic function: ", i + 1))?;
     }
     let return_type = ret_type_g.fill_type_holes_from_map(&hole_mapping);
 
