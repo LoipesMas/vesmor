@@ -242,9 +242,12 @@ fn record_access_expr(input: Span) -> PResult<Expr> {
 fn list_expr(input: Span) -> PResult<Expr> {
     map(
         delimited(
-            tag("["),
-            terminated(separated_list0(tag(","), rexpr), opt(tag(","))),
-            tag("]"),
+            ws(tag("[")),
+            terminated(
+                ws(separated_list0(ws(tag(",")), ws(rexpr))),
+                ws(opt(tag(","))),
+            ),
+            ws(tag("]")),
         ),
         Expr::List,
     )(input)
