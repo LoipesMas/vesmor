@@ -11,8 +11,8 @@
     >.
   </p>
   <p>
-    It features a custom scripting language, that is functional, declarative,
-    statically typed and interpreted.
+    It features a custom scripting language, called <Code>Vesmish</Code>, that
+    is functional, declarative, statically typed and interpreted.
   </p>
   <p>
     The limitation of this console is that it can only draw

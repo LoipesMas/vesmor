@@ -1,6 +1,6 @@
 import { indentService } from '@codemirror/language'
 
-export const vvclIndentService = () => {
+export const vesmishIndentService = () => {
     return indentService.of((indentContext, pos) => {
         const previousLine = indentContext.state.doc.lineAt(pos)
         const whitespace = previousLine.text.match(/^\s*/)

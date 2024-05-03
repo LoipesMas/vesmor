@@ -2,7 +2,7 @@ syn match @operator '[%`?&~\|\=\$\<\>\-+/\*@]'
 
 syn match @punctuation.bracket '[\[\]\{\}\(\)\;:,.]'
 
-syn match @variable.vvc '[a-z]\w*'
+syn match @variable.vesmish '[a-z]\w*'
 
 syn match @type '[A-Z]\w*'
 

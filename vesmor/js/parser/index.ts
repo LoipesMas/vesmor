@@ -1,5 +1,5 @@
-import { parser } from "./vvcl";
-import { vvclIndentService } from "./indent-service";
+import { parser } from "./vesmish";
+import { vesmishIndentService } from "./indent-service";
 import {
     LRLanguage,
     LanguageSupport,
@@ -10,7 +10,7 @@ import {
 } from "@codemirror/language";
 import { styleTags, tags as t } from "@lezer/highlight";
 
-export const vvclLanguage = LRLanguage.define({
+export const vesmishLanguage = LRLanguage.define({
     parser: parser.configure({
         props: [
             indentNodeProp.add({
@@ -32,6 +32,6 @@ export const vvclLanguage = LRLanguage.define({
     }),
 });
 
-export function vvcl() {
-    return new LanguageSupport(vvclLanguage, [vvclIndentService()]);
+export function vesmish() {
+    return new LanguageSupport(vesmishLanguage, [vesmishIndentService()]);
 }
