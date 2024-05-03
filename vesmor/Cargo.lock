@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "VVC"
+name = "Vesmor"
 version = "0.0.1"
 dependencies = [
  "async-std",
@@ -11,7 +11,7 @@ dependencies = [
  "futures 0.1.31",
  "js-sys",
  "nannou",
- "vvcl",
+ "vesmish",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
@@ -2682,7 +2682,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "vvcl"
+name = "vesmish"
 version = "0.1.0"
 dependencies = [
  "nom",

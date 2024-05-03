@@ -5,7 +5,7 @@
 <div id="manual">
   <h2>Overview</h2>
   <p>
-    VVC is a
+    Vesmor is a
     <a href="https://en.wikipedia.org/wiki/Fantasy_video_game_console"
       >Fantasy Video Game Console</a
     >.

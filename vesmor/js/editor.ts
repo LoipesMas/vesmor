@@ -1,7 +1,7 @@
 import { basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { vvcl } from "./parser/index";
+import { vesmish } from "./parser/index";
 
 import { tags } from "@lezer/highlight";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
@@ -78,7 +78,7 @@ function state_from_code(code: string): EditorState {
         extensions: [
             basicSetup,
             // keymap.of(defaultKeymap),
-            vvcl(),
+            vesmish(),
             theme,
             syntaxHighlighting(highlights),
             keymap.of(keymaps),
@@ -90,7 +90,7 @@ const STORAGE_KEY = "source_code"
 
 const PLACEHOLDER_CODE = "Loading..."
 
-export const DEFAULT_CODE_LOCATION = "game.vvc"
+export const DEFAULT_CODE_LOCATION = "game.ves"
 
 const saved_code = localStorage.getItem(STORAGE_KEY)
 

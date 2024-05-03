@@ -23,7 +23,7 @@ fn str_e(s: &str) -> ast::Expr {
 }
 
 fn main() {
-    let file_path = "./test.vvc";
+    let file_path = "./test.ves";
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
     let input = wrap_in_span(&contents);

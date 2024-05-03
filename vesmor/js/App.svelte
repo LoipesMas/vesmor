@@ -100,7 +100,7 @@
   -->
   <StickyHeader>
     <div id="modal-header">
-      <h1 id="header-h1">VVC Manual</h1>
+      <h1 id="header-h1">Vesmor Manual</h1>
       <CloseDialogButton onclick={() => (showModal = false)} />
     </div>
   </StickyHeader>

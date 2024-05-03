@@ -1,5 +1,5 @@
 [package]
-name = "vvcl"
+name = "vesmish"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,6 +11,6 @@ nom-recursive = "0.5.1"
 nom_locate = "4.2.0"
 
 [[bin]]
-name = "vvcl"
+name = "vesmish"
 
 [lib]

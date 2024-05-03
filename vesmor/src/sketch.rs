@@ -9,7 +9,7 @@ use nannou::{
     prelude::*,
     wgpu::{Backends, DeviceDescriptor, Limits},
 };
-use vvcl::{
+use vesmish::{
     ast::Ident,
     parse::ParseError,
     typ_check::{concrete_list_type, float_type, Type},
@@ -26,9 +26,9 @@ pub struct SourceCode {
 impl Default for SourceCode {
     fn default() -> Self {
         let code = if cfg!(target_family = "wasm") {
-            include_str!("../static/game.vvc").to_string()
+            include_str!("../static/game.ves").to_string()
         } else {
-            let file_path = "static/game.vvc";
+            let file_path = "static/game.ves";
             std::fs::read_to_string(file_path).expect("Should have been able to read the file")
         };
         Self {
@@ -56,8 +56,8 @@ const DEFAULT_VIEWPORT_SIZE: (u32, u32) = (720, 720);
 // used in web build
 #[allow(dead_code)]
 pub fn check_source_code(code: &str) -> Result<(), String> {
-    let contents = vvcl::utils::wrap_in_span(code);
-    let (input, defs) = vvcl::parse::top_definitions(contents).map_err(|e| match e {
+    let contents = vesmish::utils::wrap_in_span(code);
+    let (input, defs) = vesmish::parse::top_definitions(contents).map_err(|e| match e {
         ParseError::Failure(e) | ParseError::Error(e) => {
             format!("Syntax error in definition at line {}", e.0.location_line())
         }
@@ -67,14 +67,14 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
     if !input.is_empty() {
         return Err(format!("parsing failed! input left:\n{input}"));
     };
-    let mut type_definitions = vvcl::typ_check::default_type_definitions();
+    let mut type_definitions = vesmish::typ_check::default_type_definitions();
     extend_type_definitions(&mut type_definitions);
 
     let mut exprs = vec![];
 
     for def in defs.into_iter() {
         match def {
-            vvcl::parse::TopLevelDefinition::Type(t) => {
+            vesmish::parse::TopLevelDefinition::Type(t) => {
                 let body_type = t
                     .body
                     .to_type(&type_definitions)
@@ -84,22 +84,22 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
                 }
                 type_definitions.insert(t.name, body_type);
             }
-            vvcl::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
+            vesmish::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
         }
     }
     let mut global_scope_types =
-        vvcl::builtin_functions::builtin_function_type_definitions(&type_definitions);
+        vesmish::builtin_functions::builtin_function_type_definitions(&type_definitions);
 
     // FIXME: just having two passes doesn't solve it...
     // first type check pass
     for def in &exprs {
-        if matches!(def.body.borrow(), vvcl::ast::Expr::Function(_)) {
+        if matches!(def.body.borrow(), vesmish::ast::Expr::Function(_)) {
             let typ =
-                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions)
+                vesmish::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions)
                     .with_context(format!("In signature of {}: ", def.name))?;
             global_scope_types.insert(def.name.clone(), typ.clone());
         }
-        let typ = dbg!(vvcl::typ_check::check(
+        let typ = dbg!(vesmish::typ_check::check(
             &global_scope_types,
             &HashMap::new(),
             &type_definitions,
@@ -113,13 +113,13 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
     }
     // second type check pass, with global scope
     for def in &exprs {
-        if matches!(def.body.borrow(), vvcl::ast::Expr::Function(_)) {
+        if matches!(def.body.borrow(), vesmish::ast::Expr::Function(_)) {
             let typ =
-                vvcl::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions)
+                vesmish::typ_check::Type::from_function_def_unchecked(&def.body, &type_definitions)
                     .with_context(format!("In signature of {}: ", def.name))?;
             global_scope_types.insert(def.name.clone(), typ.clone());
         }
-        let typ = dbg!(vvcl::typ_check::check(
+        let typ = dbg!(vesmish::typ_check::check(
             &global_scope_types,
             &HashMap::new(),
             &type_definitions,
@@ -189,17 +189,17 @@ pub fn check_source_code(code: &str) -> Result<(), String> {
 }
 
 // < x = 5.0; y = 7.0; > -> pt2(5.0,7.0)
-fn rec_to_vec2(record: vvcl::ast::Record) -> Vec2 {
+fn rec_to_vec2(record: vesmish::ast::Record) -> Vec2 {
     let x = record.get(&ident("x")).unwrap();
     let y = record.get(&ident("y")).unwrap();
-    if let (vvcl::ast::Expr::Float(x), vvcl::ast::Expr::Float(y)) = (x.borrow(), y.borrow()) {
+    if let (vesmish::ast::Expr::Float(x), vesmish::ast::Expr::Float(y)) = (x.borrow(), y.borrow()) {
         pt2(*x as f32, *y as f32)
     } else {
         panic!("expected <x: Float; y: Float;>, got {record:?}");
     }
 }
 
-fn command_from_record(ev: &vvcl::ast::EnumVariant) -> Command {
+fn command_from_record(ev: &vesmish::ast::EnumVariant) -> Command {
     if ev.enu.0 == "Command" {
         match ev.variant.0.as_str() {
             "DrawLine" => {
@@ -207,10 +207,10 @@ fn command_from_record(ev: &vvcl::ast::EnumVariant) -> Command {
                     .body
                     .as_ref()
                     .expect("Expected DrawLine body to be present!");
-                if let vvcl::ast::Expr::Record(ref record) = **body {
+                if let vesmish::ast::Expr::Record(ref record) = **body {
                     let start_rec = record.get(&ident("start")).unwrap();
                     let end_rec = record.get(&ident("end")).unwrap();
-                    if let (vvcl::ast::Expr::Record(start_rec), vvcl::ast::Expr::Record(end_rec)) =
+                    if let (vesmish::ast::Expr::Record(start_rec), vesmish::ast::Expr::Record(end_rec)) =
                         (start_rec.borrow(), end_rec.borrow())
                     {
                         let start = rec_to_vec2(start_rec.clone());
@@ -242,9 +242,9 @@ pub struct Model {
 }
 
 struct Runtime {
-    global_scope: vvcl::eval::ScopeMap,
-    game_state: vvcl::ast::RExpr,
-    event_function: vvcl::ast::RExpr,
+    global_scope: vesmish::eval::ScopeMap,
+    game_state: vesmish::ast::RExpr,
+    event_function: vesmish::ast::RExpr,
 }
 
 macro_rules! keys {
@@ -291,8 +291,8 @@ fn extend_type_definitions(type_definitions: &mut HashMap<Ident, Type>) {
 fn init_runtime(source_code: &SourceCode) -> Runtime {
     let contents = &source_code.code;
 
-    let contents = vvcl::utils::wrap_in_span(&contents);
-    let (input, defs) = vvcl::parse::top_definitions(contents).unwrap();
+    let contents = vesmish::utils::wrap_in_span(&contents);
+    let (input, defs) = vesmish::parse::top_definitions(contents).unwrap();
 
     if !input.is_empty() {
         panic!("parsing failed! input left:\n{input}");
@@ -302,25 +302,25 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
 
     for def in defs.into_iter() {
         match def {
-            vvcl::parse::TopLevelDefinition::Type(_) => {}
-            vvcl::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
+            vesmish::parse::TopLevelDefinition::Type(_) => {}
+            vesmish::parse::TopLevelDefinition::Expr(e) => exprs.push(e),
         }
     }
 
     // 1st pass of "compilation"
     // without global scope
-    let reduced_defs: Vec<vvcl::ast::Definition> = exprs
+    let reduced_defs: Vec<vesmish::ast::Definition> = exprs
         .iter()
-        .map(|d| vvcl::ast::Definition {
-            body: vvcl::eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),
+        .map(|d| vesmish::ast::Definition {
+            body: vesmish::eval::beta_reduction(&HashMap::new(), &HashMap::new(), &d.body),
             name: d.name.clone(),
         })
         .collect();
-    let mut global_scope = vvcl::utils::default_global_scope();
-    global_scope.extend(vvcl::utils::map_from_defs(reduced_defs));
+    let mut global_scope = vesmish::utils::default_global_scope();
+    global_scope.extend(vesmish::utils::map_from_defs(reduced_defs));
 
     let game_state = global_scope.get(&ident("init")).unwrap().clone();
-    let event_function = if let vvcl::ast::Expr::Function(f) =
+    let event_function = if let vesmish::ast::Expr::Function(f) =
         global_scope.get(&ident("event_handler")).unwrap().borrow()
     {
         f.body.clone()
@@ -335,24 +335,24 @@ fn init_runtime(source_code: &SourceCode) -> Runtime {
 }
 
 fn run_event_handler(
-    global_scope: &HashMap<Ident, vvcl::ast::RExpr>,
-    event_function: vvcl::ast::RExpr,
-    game_state: vvcl::ast::RExpr,
-    event: vvcl::ast::RExpr,
-) -> (vvcl::ast::RExpr, Vec<Command>) {
-    let mut local_scope = vvcl::eval::ScopeMap::new();
+    global_scope: &HashMap<Ident, vesmish::ast::RExpr>,
+    event_function: vesmish::ast::RExpr,
+    game_state: vesmish::ast::RExpr,
+    event: vesmish::ast::RExpr,
+) -> (vesmish::ast::RExpr, Vec<Command>) {
+    let mut local_scope = vesmish::eval::ScopeMap::new();
     local_scope.insert(ident("event"), event);
     local_scope.insert(ident("game"), game_state);
 
-    let evaled = vvcl::eval::beta_reduction(global_scope, &local_scope, &event_function);
+    let evaled = vesmish::eval::beta_reduction(global_scope, &local_scope, &event_function);
 
     extract_state_and_commands(evaled)
 }
 
 fn key_down(model: &mut Model, key: Key) {
     let key_str = format!("{key:?}");
-    let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
-    let event_enum = vvcl::utils::enum_variant("Event", "KeyDown", Some(key_enum));
+    let key_enum = vesmish::utils::enum_variant("Key", &key_str, None);
+    let event_enum = vesmish::utils::enum_variant("Event", "KeyDown", Some(key_enum));
 
     let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
@@ -372,8 +372,8 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
     }
     model.pressed_keys.insert(key);
     let key_str = format!("{key:?}");
-    let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
-    let event_enum = vvcl::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
+    let key_enum = vesmish::utils::enum_variant("Key", &key_str, None);
+    let event_enum = vesmish::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
 
     let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
@@ -388,8 +388,8 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 fn key_released(app: &App, model: &mut Model, key: Key) {
     model.pressed_keys.remove(&key);
     let key_str = format!("{key:?}");
-    let key_enum = vvcl::utils::enum_variant("Key", &key_str, None);
-    let event_enum = vvcl::utils::enum_variant("Event", "KeyReleased", Some(key_enum));
+    let key_enum = vesmish::utils::enum_variant("Key", &key_str, None);
+    let event_enum = vesmish::utils::enum_variant("Event", "KeyReleased", Some(key_enum));
 
     let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
@@ -419,14 +419,14 @@ pub fn model(app: &App) -> Model {
     })
 }
 
-fn extract_state_and_commands(result: vvcl::ast::RExpr) -> (vvcl::ast::RExpr, Vec<Command>) {
-    if let vvcl::ast::Expr::Record(r) = result.borrow() {
+fn extract_state_and_commands(result: vesmish::ast::RExpr) -> (vesmish::ast::RExpr, Vec<Command>) {
+    if let vesmish::ast::Expr::Record(r) = result.borrow() {
         let game_state = r.get(&ident("game")).unwrap().clone();
-        let commands = if let vvcl::ast::Expr::List(l) = r.get(&ident("commands")).unwrap().borrow()
+        let commands = if let vesmish::ast::Expr::List(l) = r.get(&ident("commands")).unwrap().borrow()
         {
             let mut ret = vec![];
             for command in l {
-                if let vvcl::ast::Expr::EnumVariant(ev) = command.borrow() {
+                if let vesmish::ast::Expr::EnumVariant(ev) = command.borrow() {
                     ret.push(command_from_record(ev));
                 } else {
                     panic!("expected Enum Variant of Command, got {command:?}")
@@ -457,7 +457,7 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
 
     let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
-    let event = enum_variant("Event", "Tick", Some(vvcl::ast::Expr::Float(delta).into()));
+    let event = enum_variant("Event", "Tick", Some(vesmish::ast::Expr::Float(delta).into()));
 
     let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
@@ -526,7 +526,7 @@ async fn create_window(app: &App) {
     app.new_window()
         .device_descriptor(device_desc)
         .size(DEFAULT_VIEWPORT_SIZE.0, DEFAULT_VIEWPORT_SIZE.1)
-        .title("VVC")
+        .title("vesmor")
         // .raw_event(raw_event)
         .key_pressed(key_pressed)
         .key_released(key_released)
