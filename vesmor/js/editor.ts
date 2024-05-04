@@ -90,7 +90,7 @@ const STORAGE_KEY = "source_code"
 
 const PLACEHOLDER_CODE = "Loading..."
 
-export const DEFAULT_CODE_LOCATION = "game.ves"
+export const DEFAULT_CODE_LOCATION = "pong.ves"
 
 const saved_code = localStorage.getItem(STORAGE_KEY)
 
@@ -141,8 +141,14 @@ export function set_output(output: string) {
     }
 }
 
-export async function reset_code(source: string): Promise<void> {
-    return fetch(source)
-        .then((resp) => resp.text())
-        .then(set_code);
+export async function reset_code(source: string): Promise<boolean> {
+    const resp = await fetch(source);
+    if (resp.status === 200) {
+        const code = await resp.text();
+        set_code(code);
+        return true;
+    } else {
+        set_output("Failed to load game code :c " + resp.status)
+        return false;
+    }
 }

@@ -26,9 +26,9 @@ pub struct SourceCode {
 impl Default for SourceCode {
     fn default() -> Self {
         let code = if cfg!(target_family = "wasm") {
-            include_str!("../static/game.ves").to_string()
+            include_str!("../static/pong.ves").to_string()
         } else {
-            let file_path = "static/game.ves";
+            let file_path = "static/pong.ves";
             std::fs::read_to_string(file_path).expect("Should have been able to read the file")
         };
         Self {
