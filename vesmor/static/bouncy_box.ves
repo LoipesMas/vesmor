@@ -122,14 +122,15 @@ jump = (game: Game) -> Game {
 };
 
 event_handler = (game: Game, event: Event) -> GameAndCommands {
-    new_game = ? event
-        | KeyPressed` key => ? key
+    ? event
+        | Tick` delta => update_handler(game, delta);
+        | KeyPressed` key => {
+            new_game = ? key
             | G` => < game | position = vec2(0.0,0.0);>;
             | W` => jump(game);
             | _ => game;
             ;
-        | _ => game;
-        ;
-    <game = new_game; commands = [];>
+            < game = new_game; commands = [];>
+        };
+        | _ => < game = game; commands = [];>;
 };
-
