@@ -5,7 +5,7 @@
   "scripts": {
     "build": "rimraf dist pkg && webpack --mode production",
     "startprod": "rimraf dist pkg && webpack-dev-server --open --mode production",
-    "start": "rimraf dist pkg && webpack-dev-server --open ",
+    "start": "rimraf dist pkg && wasm-pack build && webpack-dev-server --open ",
     "test": "cargo test && wasm-pack test --headless"
   },
   "devDependencies": {
