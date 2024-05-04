@@ -210,8 +210,10 @@ fn command_from_record(ev: &vesmish::ast::EnumVariant) -> Command {
                 if let vesmish::ast::Expr::Record(ref record) = **body {
                     let start_rec = record.get(&ident("start")).unwrap();
                     let end_rec = record.get(&ident("end")).unwrap();
-                    if let (vesmish::ast::Expr::Record(start_rec), vesmish::ast::Expr::Record(end_rec)) =
-                        (start_rec.borrow(), end_rec.borrow())
+                    if let (
+                        vesmish::ast::Expr::Record(start_rec),
+                        vesmish::ast::Expr::Record(end_rec),
+                    ) = (start_rec.borrow(), end_rec.borrow())
                     {
                         let start = rec_to_vec2(start_rec.clone());
                         let end = rec_to_vec2(end_rec.clone());
@@ -422,20 +424,20 @@ pub fn model(app: &App) -> Model {
 fn extract_state_and_commands(result: vesmish::ast::RExpr) -> (vesmish::ast::RExpr, Vec<Command>) {
     if let vesmish::ast::Expr::Record(r) = result.borrow() {
         let game_state = r.get(&ident("game")).unwrap().clone();
-        let commands = if let vesmish::ast::Expr::List(l) = r.get(&ident("commands")).unwrap().borrow()
-        {
-            let mut ret = vec![];
-            for command in l {
-                if let vesmish::ast::Expr::EnumVariant(ev) = command.borrow() {
-                    ret.push(command_from_record(ev));
-                } else {
-                    panic!("expected Enum Variant of Command, got {command:?}")
+        let commands =
+            if let vesmish::ast::Expr::List(l) = r.get(&ident("commands")).unwrap().borrow() {
+                let mut ret = vec![];
+                for command in l {
+                    if let vesmish::ast::Expr::EnumVariant(ev) = command.borrow() {
+                        ret.push(command_from_record(ev));
+                    } else {
+                        panic!("expected Enum Variant of Command, got {command:?}")
+                    }
                 }
-            }
-            ret
-        } else {
-            panic!("expected list of commands, got `IDK` lol");
-        };
+                ret
+            } else {
+                panic!("expected list of commands, got `IDK` lol");
+            };
         (game_state, commands)
     } else {
         panic!("Expected Record from update, got {:?}", result)
@@ -457,7 +459,11 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
 
     let delta = update.since_last.as_secs_f64().min(1.0 / 60.0);
-    let event = enum_variant("Event", "Tick", Some(vesmish::ast::Expr::Float(delta).into()));
+    let event = enum_variant(
+        "Event",
+        "Tick",
+        Some(vesmish::ast::Expr::Float(delta).into()),
+    );
 
     let (game_state, commands) = run_event_handler(
         &model.runtime.global_scope,
