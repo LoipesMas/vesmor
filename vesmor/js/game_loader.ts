@@ -29,7 +29,7 @@ export async function check_code(source: string): Promise<string> {
 }
 
 export async function init() {
-    game = await import("../pkg/index.js");
+    game = await import("../pkg/vesmor.js");
     await game.main_web();
     let childrens = document.body.children;
     // canvas is inserted as last element

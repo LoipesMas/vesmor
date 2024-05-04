@@ -76,5 +76,89 @@
         ];
       };
     });
+    packages = forEachSupportedSystem ({pkgs}: rec {
+      vesmor_pkg = pkgs.rustPlatform.buildRustPackage {
+        pname = "vesmor_pkg";
+        version = "0.1.0";
+
+        src = ./.;
+
+        cargoHash = "sha256-wr/SaBeGZRFaoqdJdI+tYiNIyrmKpfgURyl7uvqnMtA=";
+
+        CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
+
+        vesmish = ./vesmish;
+
+        # hack to have local vesmish source
+        postUnpack = ''
+          mv *-source/vesmor/* *-source/
+        '';
+        cargoPatches = [
+          ./Cargo.toml.patch
+        ];
+
+        nativeBuildInputs = with pkgs; [
+          rustToolchain
+          wasm-bindgen-cli
+          wasm-pack
+          binaryen
+        ];
+
+        buildPhase = ''
+          export WASM_PACK_CACHE=/build/.wasm-pack-cache
+          wasm-pack build --out-dir $out/pkg
+        '';
+
+        installPhase = ''echo Skipping Install Phase'';
+
+        checkPhase = ''echo Skipping Check Phase'';
+
+        meta = with pkgs.lib; {
+          description = "";
+          homepage = "";
+          # license = licenses.unlicense;
+          maintainers = [];
+        };
+      };
+
+      vesmor_web = pkgs.buildNpmPackage {
+        pname = "vesmor_web";
+        version = "0.1";
+
+        src = ./vesmor;
+
+        vesmish = ./vesmish;
+
+        vesmor_pkg = vesmor_pkg;
+
+        nativeBuildInputs = with pkgs; [
+          nodejs
+          nodePackages.webpack
+          nodePackages.webpack-cli
+        ];
+        buildInputs = [
+        ];
+
+        buildPhase = ''
+        echo $vesmor_pkg
+        ls -lah $vesmor_pkg
+        cp $vesmor_pkg/pkg ./pkg -r
+        ls -lah
+        ls -lah ./pkg
+        webpack --mode production -o $out/web
+        '';
+
+        npmDepsHash = "sha256-9eTJrzE4HgALFXQZImj/IGFQ2eK5bccFoccPegvm1XI=";
+
+        outputs = ["out"];
+
+        meta = {
+          description = "Web build of Vesmor console";
+          homepage = "";
+          # license = lib.licenses.;
+          maintainers = with pkgs.lib.maintainers; [];
+        };
+      };
+    });
   };
 }

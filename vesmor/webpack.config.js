@@ -88,9 +88,6 @@ module.exports = {
             patterns: [path.resolve(__dirname, "static")],
         }),
 
-        new WasmPackPlugin({
-            crateDirectory: __dirname,
-        }),
         new webpack.LoaderOptionsPlugin({
             options: {
                 experiments: {
