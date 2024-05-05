@@ -651,7 +651,8 @@ pub fn check(
                 let call_arg_types = fc
                     .arguments
                     .iter()
-                    .map(|v| c(v.clone()))
+                    .enumerate()
+                    .map(|(i, v)| c(v.clone()).with_context(format!("In argument #{}: ", i + 1)))
                     .collect::<Result<Vec<_>, _>>()?;
                 match call_arg_types.len().cmp(&args.len()) {
                     std::cmp::Ordering::Greater => {
@@ -691,8 +692,15 @@ pub fn check(
                     }
                     std::cmp::Ordering::Equal => {
                         if args.iter().any(|a| a.has_holes()) {
-                            //TODO: check rough matching
-
+                            let _ = args
+                                .iter()
+                                .zip(call_arg_types.iter())
+                                .enumerate()
+                                .map(|(i, (a, b))| {
+                                    a.matches(b)
+                                        .with_context(format!("In argument #{}: ", i + 1))
+                                })
+                                .collect::<Result<Vec<_>, _>>()?;
                             typ_check_generic_function(args, *return_type, call_arg_types)
                                 .with_context("In function call: ".to_string())
                         } else if call_arg_types

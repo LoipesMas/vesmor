@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{borrow::Borrow, collections::HashMap, ops::Deref, rc::Rc};
+use std::{borrow::Borrow, collections::HashMap, rc::Rc};
 
 use crate::{
     ast::{ArgDef, BuiltInFunction, Expr, Function, FunctionCall, Ident, RExpr},
@@ -251,6 +251,45 @@ fn list_get() -> RExpr {
     .into()
 }
 
+fn list_skip() -> RExpr {
+    fn body(local_scope: &ScopeMap) -> RExpr {
+        let list = local_scope.get(&ident("list"));
+        let amount = local_scope.get(&ident("amount"));
+        match (list.map(|v| v.borrow()), amount.map(|v| v.borrow())) {
+            (Some(Expr::List(list)), Some(Expr::Int(amount))) => {
+                Expr::List(list.iter().skip(*amount as usize).cloned().collect()).into()
+            }
+            (Some(a), Some(b)) if a.is_realized() && b.is_realized() => {
+                panic!("Expected List and Int, got {:?} and {:?}", a, b)
+            }
+            _ => Expr::BuiltInFunction(BuiltInFunction { body: &body }).into(),
+        }
+    }
+    let bif = BuiltInFunction { body: &body };
+    let list_type = TypeName::Normal(NormalTypeName {
+        name: ident("List"),
+        subtype: Some(Box::new(NormalTypeName {
+            name: ident("*I"),
+            subtype: None,
+        })),
+    });
+    Expr::Function(Function {
+        arguments: vec![
+            ArgDef {
+                name: ident("list"),
+                typ: list_type.clone(),
+            },
+            ArgDef {
+                name: ident("amount"),
+                typ: int_type_name(),
+            },
+        ],
+        return_type: list_type,
+        body: Rc::new(Expr::BuiltInFunction(bif)),
+    })
+    .into()
+}
+
 fn list_size() -> RExpr {
     fn body(local_scope: &ScopeMap) -> RExpr {
         let list = local_scope.get(&ident("list"));
@@ -327,6 +366,7 @@ pub fn scope_with_builtin_functions() -> ScopeMap {
         (ident("list_map"), list_map()),
         (ident("list_fold"), list_fold()),
         (ident("list_get"), list_get()),
+        (ident("list_skip"), list_skip()),
         (ident("list_size"), list_size()),
         (ident("sin"), sin()),
         (ident("cos"), cos()),
@@ -357,6 +397,10 @@ pub fn builtin_function_type_definitions(
         (
             ident("list_get"),
             Type::from_function_def_unchecked(&list_get(), type_definitions).unwrap(),
+        ),
+        (
+            ident("list_skip"),
+            Type::from_function_def_unchecked(&list_skip(), type_definitions).unwrap(),
         ),
         (
             ident("list_size"),

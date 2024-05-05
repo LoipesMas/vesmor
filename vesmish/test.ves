@@ -37,5 +37,5 @@ fib = (n: Int) -> Int {
 };
 
 main = (a: Bool, b: Int) -> List<Int> {
-    list_map([1,2,3,4,5],add(b))
+    list_skip([1,2,3,4,5],2)
 };
