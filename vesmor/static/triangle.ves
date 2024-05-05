@@ -1,0 +1,129 @@
+neg = (a: Float) -> Float (0.0 -. a);
+
+min = (a: Float, b: Float) -> Float {
+    ? (a <. b)
+    | True` => a;
+    | False` => b;
+};
+
+max = (a: Float, b: Float) -> Float {
+    ? (a >. b)
+    | True` => a;
+    | False` => b;
+};
+
+abs = (a: Float) -> Float {
+    ? (a >. 0.0)
+    | True` => a;
+    | False` => neg(a);
+};
+
+vec2 = (x: Float, y: Float) -> Vec2 {
+    < x = x; y = y;>
+};
+
+add_vec2s = (a: Vec2, b: Vec2) -> Vec2 {
+    < x = (@a.x +. @b.x); y = (@a.y +. @b.y);>
+};
+
+mul_vec2_scalar = (vec: Vec2, scalar: Float) -> Vec2 {
+    < x = (@vec.x *. scalar); y = (@vec.y *. scalar);>
+};
+
+mul_vec2_scalar_ = (scalar: Float, vec: Vec2) -> Vec2 {
+    mul_vec2_scalar(vec, scalar)
+};
+
+rotate_vec2 = (v: Vec2, a: Float) -> Vec2 {
+    x = @v.x;
+    y = @v.y;
+    <
+        x = ((cos(a) *. x) -. (sin(a) *. y));
+        y = ((sin(a) *. x) +. (cos(a) *. y));
+    >
+};
+
+rotate_vec2_ = (a: Float, v: Vec2) -> Vec2 {
+    rotate_vec2(v,a)
+};
+
+
+draw_line = (start: Vec2, end: Vec2) -> Command {
+    Command::DrawLine` < start = start; end = end; >
+};
+
+DrawLinesAccum : < commands: List<Command>, prev_point: Option<Vec2>>;
+draw_lines = (points: List<Vec2>) -> List<Command> {
+    f = (accum: DrawLinesAccum, point: Vec2) -> DrawLinesAccum {
+        new_commands = ? @accum.prev_point
+            | None` => [];
+            | Some` prev_point => [draw_line(prev_point, point)];
+            ;
+        < commands = (@accum.commands ~~ new_commands); prev_point = Option::Some` point;>  
+    };
+    init_accum = {
+        init_f = () -> DrawLinesAccum < commands = []; prev_point = Option::None`;>;
+        init_f()
+    };
+    @list_fold(points, f, init_accum).commands
+};
+
+draw_lines_loop = (points: List<Vec2>) -> List<Command> {
+    looped_points = ? list_get(points, 0)
+        | Some` p => (points ~~ [p]);
+        | None` => points;
+        ;
+    draw_lines(looped_points)
+};
+
+Game : <
+    points : List<Vec2>,
+    total_time: Float,
+>;
+
+init = <
+        points = [
+            vec2(0.1,0.3),
+            vec2(0.2,-0.1),
+            vec2(-0.2,0.0)
+        ];
+        total_time = 0.0;
+     >
+;
+move = (position: Vec2, speed: Vec2, delta: Float) -> Vec2 {
+    add_vec2s(position, mul_vec2_scalar(speed, delta))
+};
+
+GameAndCommands : < game: Game, commands: List<Command>>;
+
+draw = (game: Game) -> List<Command> {
+    time = @game.total_time;
+    center = vec2((sin((time *. 2.0)) *. 0.25), 0.0);
+    rotated_center = rotate_vec2(center, time);
+    scaled_points = list_map(
+        @game.points, 
+        mul_vec2_scalar_(
+          ((sin(time) +. 1.5) *. 0.3)
+        )
+    );
+    draw_lines_loop(list_map(scaled_points, add_vec2s(rotated_center)))
+};
+
+update_handler = (game: Game, delta: Float) -> GameAndCommands {
+    rotated_points = list_map(@game.points, rotate_vec2_((delta *. 1.5)));
+    < 
+      game =
+          <
+          points = rotated_points;
+          total_time = (@game.total_time +. delta);
+          >
+        ; 
+      commands = draw(game);
+    >
+};
+
+event_handler = (game: Game, event: Event) -> GameAndCommands {
+    ? event
+        | Tick` delta => update_handler(game, delta);
+        | _ => < game = game; commands = [];>;
+};

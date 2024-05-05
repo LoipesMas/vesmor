@@ -85,6 +85,7 @@
     <select bind:value={selected_code}>
       <option value="pong.ves">Pong</option>
       <option value="bouncy_box.ves">Bouncy Box</option>
+      <option value="triangle.ves">Triangle</option>
     </select>
     <button type="button" on:click={() => reset_code_(selected_code)}
       ><Icons type={"download"} /> LOAD CODE
