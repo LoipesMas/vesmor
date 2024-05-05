@@ -55,8 +55,8 @@
 
   let showModal = true;
   onMount(() => {
-    init_game();
     init_editor();
+    init_game().then(full_reload_);
   });
 </script>
 
