@@ -3,8 +3,7 @@
   import {
     get_code,
     set_output,
-    reset_code,
-    DEFAULT_CODE_LOCATION,
+    load_code,
     init as init_editor,
   } from "./editor";
   import {
@@ -35,8 +34,8 @@
     }
   }
 
-  function reset_code_(code_location: string) {
-    reset_code(code_location).then((c) => {
+  function load_code_(code_location: string) {
+    load_code(code_location).then((c) => {
       if (c) {
         full_reload_();
       }
@@ -87,7 +86,7 @@
       <option value="bouncy_box.ves">Bouncy Box</option>
       <option value="triangle.ves">Triangle</option>
     </select>
-    <button type="button" on:click={() => reset_code_(selected_code)}
+    <button type="button" on:click={() => load_code_(selected_code)}
       ><Icons type={"download"} /> LOAD CODE
     </button>
     <!-- TODO: button for restarting the console (for when it crashes) -->

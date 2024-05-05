@@ -119,7 +119,7 @@ export function init() {
         });
     }
     if (saved_code === null) {
-        reset_code(DEFAULT_CODE_LOCATION)
+        load_code(DEFAULT_CODE_LOCATION)
     }
     return view;
 }
@@ -141,7 +141,7 @@ export function set_output(output: string) {
     }
 }
 
-export async function reset_code(source: string): Promise<boolean> {
+export async function load_code(source: string): Promise<boolean> {
     const resp = await fetch(source);
     if (resp.status === 200) {
         const code = await resp.text();
