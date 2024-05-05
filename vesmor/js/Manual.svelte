@@ -415,9 +415,8 @@
       the console. Useful when you're just messing around.
     </li>
     <li>
-      <Code>Reset Code</Code> — resets code to the original state (currently my implementation
-      of Pong). For when you want to start over. <b>Warning:</b> there's no going
-      back.
+      <Code>Load Code</Code> — loads the selected example. <b>Warning:</b> this will
+      overwrite the current code.
     </li>
   </ul>
   <p>
