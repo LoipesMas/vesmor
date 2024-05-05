@@ -87,7 +87,7 @@
       <option value="bouncy_box.ves">Bouncy Box</option>
     </select>
     <button type="button" on:click={() => reset_code_(selected_code)}
-      ><Icons type={"trash"} /> LOAD CODE
+      ><Icons type={"download"} /> LOAD CODE
     </button>
     <!-- TODO: button for restarting the console (for when it crashes) -->
   </div>

@@ -56,17 +56,14 @@ select {
     font-size: 1.3rem;
     color: $highlight;
     background-color: $blue;
-    border: 0;
+    border: 1px solid $highlight;
     border-radius: 5px;
     transition: all 0.4s;
     &:hover {
         background-color: $light-blue;
         cursor: pointer;
     }
-    &:active {
-        background-color: grey;
-        cursor: pointer;
-    }
+
 }
 
 #output {
