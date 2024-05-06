@@ -81,7 +81,7 @@
         pname = "vesmor_pkg";
         version = "0.1.0";
 
-        src = ./.;
+        src = ./vesmor;
 
         cargoHash = "sha256-wr/SaBeGZRFaoqdJdI+tYiNIyrmKpfgURyl7uvqnMtA=";
 
@@ -89,13 +89,12 @@
 
         vesmish = ./vesmish;
 
-        # hack to have local vesmish source
+        # patch to have local vesmish source
+        # uses dynamic vesmish path, so can't be a .patch file
         postUnpack = ''
-          mv *-source/vesmor/* *-source/
+          sed 's,^vesmish.*,vesmish = { path = "'$vesmish'"},' -i vesmor/Cargo.toml
         '';
-        cargoPatches = [
-          ./Cargo.toml.patch
-        ];
+
 
         nativeBuildInputs = with pkgs; [
           rustToolchain
