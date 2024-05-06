@@ -291,6 +291,10 @@
       — for getting an item from the given index
     </li>
     <li>
+      <Code>list_skip: (List&lt;*A&gt;, Int) -&gt; List&lt;*A&gt;</Code>
+      — skips first n amount of items in the list
+    </li>
+    <li>
       <Code>list_map: (List&lt;*A&gt;, (*A) -&gt; *B) -&gt; List&lt;*B&gt;</Code
       >
       — for transforming the list with the given function
