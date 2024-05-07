@@ -238,8 +238,6 @@ pub struct Model {
     line_weight: f32,
     commands: Vec<Command>,
     runtime: Runtime,
-    // TODO: I think we could just use app.keys instead
-    pressed_keys: HashSet<Key>,
     viewport_resolution: Vec2,
 }
 
@@ -368,11 +366,9 @@ fn key_down(model: &mut Model, key: Key) {
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
-    if model.pressed_keys.contains(&key) {
-        // already pressed, nothing to do
+    if app.keys.down.contains(&key) {
         return;
-    }
-    model.pressed_keys.insert(key);
+    };
     let key_str = format!("{key:?}");
     let key_enum = vesmish::utils::enum_variant("Key", &key_str, None);
     let event_enum = vesmish::utils::enum_variant("Event", "KeyPressed", Some(key_enum));
@@ -388,7 +384,6 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn key_released(app: &App, model: &mut Model, key: Key) {
-    model.pressed_keys.remove(&key);
     let key_str = format!("{key:?}");
     let key_enum = vesmish::utils::enum_variant("Key", &key_str, None);
     let event_enum = vesmish::utils::enum_variant("Event", "KeyReleased", Some(key_enum));
@@ -412,7 +407,6 @@ pub fn model(app: &App) -> Model {
             line_weight: 1.0,
             commands: vec![],
             runtime: init_runtime(sc),
-            pressed_keys: HashSet::new(),
             viewport_resolution: pt2(
                 DEFAULT_VIEWPORT_SIZE.0 as f32,
                 DEFAULT_VIEWPORT_SIZE.1 as f32,
@@ -444,7 +438,7 @@ fn extract_state_and_commands(result: vesmish::ast::RExpr) -> (vesmish::ast::REx
     }
 }
 
-fn update(_app: &App, model: &mut Model, update: Update) {
+fn update(app: &App, model: &mut Model, update: Update) {
     SOURCE_CODE.with_borrow_mut(|sc| {
         if !sc.acknowledged {
             sc.acknowledged = true;
@@ -479,8 +473,8 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     // if it doesn't, we should maybe store commands_to_be_drawn separately
     model.commands = commands;
 
-    for key in model.pressed_keys.clone() {
-        key_down(model, key)
+    for key in app.keys.down.iter() {
+        key_down(model, *key)
     }
 }
 
