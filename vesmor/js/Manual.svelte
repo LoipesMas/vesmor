@@ -11,6 +11,14 @@
     >.
   </p>
   <p>
+    It is inspired by old arcade games (such as <a
+      href="https://en.wikipedia.org/wiki/Star_Wars_(1983_video_game)"
+      >Star Wars from 1983</a
+    >) and
+    <a href="https://en.wikipedia.org/wiki/Vectrex">Vectrex</a>, a home console
+    with a vector display.
+  </p>
+  <p>
     It features a custom scripting language, called <Code>Vesmish</Code>, that
     is functional, declarative, statically typed and interpreted.
   </p>
