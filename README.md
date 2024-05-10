@@ -2,7 +2,7 @@
 
 Vesmor is a [Fantasy Video Game Console](https://en.wikipedia.org/wiki/Fantasy_video_game_console).
 
-It is inspired by old arcade games (such as [Star Wars from 1983](https://en.wikipedia.org/wiki/Star_Wars_(1983_video_game)) and
+It is inspired by old arcade games (such as [Star Wars from 1983](https://en.wikipedia.org/wiki/Star_Wars_(1983_video_game))) and
 [Vectrex](https://en.wikipedia.org/wiki/Vectrex), a home console
 with a vector display.
 
@@ -18,7 +18,7 @@ More detailed information can be found in the manual included with the devkit.
 # State
 
 It's mostly working, enough to make simple-ish games.
-Some language features are not implemented yet (mostly generics related and quality of life).
+Some language features are not implemented yet (mainly generics-related stuff and quality of life).
 I am also planning to add sound to the console one day.
 
 # Code
@@ -27,9 +27,9 @@ This repo contains two modules: `vesmish` and `vesmor`.
 
 ## `vesmish`
 
-`vesmish` contains a Rust crate that includes the entire interpreter for the language.
+`vesmish` contains a Rust crate that includes the interpreter for the language.
 
-A CLI for it is not implemented yet, so it can really be only used as a library.
+A CLI is not implemented yet, so it can really be only used as a library.
 
 ## `vesmor`
 
