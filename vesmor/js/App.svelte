@@ -93,17 +93,17 @@
       ><Icons type={"download"} /> LOAD CODE
     </button>
     <hr />
-    <div class="checkbox">
+    <label class="checkbox-container"
+      >VIM MODE
       <input
         type="checkbox"
-        name="vim_mode"
         bind:checked={vim_mode}
         on:change={() => {
           set_vim_mode(vim_mode);
         }}
       />
-      <label for="vim_mode">VIM MODE</label><br />
-    </div>
+      <span class="checkmark"></span>
+    </label>
     <!-- TODO: button for restarting the console (for when it crashes) -->
   </div>
 
@@ -135,6 +135,7 @@
 
 <style lang="scss">
   $highlight: #ff7d00;
+  $highlight2: #fc7d5d;
   $dark-blue: #001020;
   #modal-header {
     background-color: $dark-blue;
@@ -156,12 +157,42 @@
     }
   }
 
-  .checkbox {
-    display: "flex";
-    flex-direction: "row";
+  .checkbox-container {
     color: $highlight;
     margin: 0.2rem;
     padding: 0.5rem 0.8rem;
     font-size: 1.3rem;
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      height: 0;
+      width: 0;
+    }
+    .checkmark {
+      position: absolute;
+      top: 0.2rem;
+      left: 0.2rem;
+      height: 1.6rem;
+      width: 1.6rem;
+      background-color: $dark-blue;
+      border: 2px solid $highlight;
+    }
+    &:hover input ~ .checkmark {
+      background-color: #234;
+    }
+    & input:checked ~ .checkmark {
+      background-color: $highlight;
+    }
   }
 </style>
