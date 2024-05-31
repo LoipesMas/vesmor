@@ -5,189 +5,188 @@ $highlight: #ff7d00;
 $highlight2: #fc7d5d;
 
 body {
-    background-color: $dark-blue;
+  background-color: $dark-blue;
 }
 
 .main-box {
-    display: flex;
-    width: fit-content;
-    margin: 0 auto;
-    padding: 1em;
+  display: flex;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 1em;
 }
 
 .vert-flex {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .btn-group {
-    height: fit-content;
-    margin: 0 1em;
-    border: 1px solid $highlight;
-    padding: 1rem;
-    hr {
-        width: 90%;
-        color: $highlight;
-    }
+  height: fit-content;
+  margin: 0 1em;
+  border: 1px solid $highlight;
+  padding: 1rem;
+  hr {
+    width: 90%;
+    color: $highlight;
+  }
 }
 
 button {
-    margin: 0.2rem;
-    padding: 0.5rem 0.8rem;
-    font-size: 1.3rem;
-    color: $highlight;
-    background-color: $blue;
-    border: 0;
-    border-radius: 5px;
-    transition: all 0.4s;
-    &:hover {
-        background-color: $light-blue;
-        cursor: pointer;
-    }
-    &:active {
-        background-color: grey;
-        cursor: pointer;
-    }
+  margin: 0.2rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 1.3rem;
+  color: $highlight;
+  background-color: $blue;
+  border: 0;
+  border-radius: 5px;
+  transition: all 0.4s;
+  &:hover {
+    background-color: $light-blue;
+    cursor: pointer;
+  }
+  &:active {
+    background-color: grey;
+    cursor: pointer;
+  }
 }
 
 select {
-    margin: 0.2rem;
-    padding: 0.5rem 0.8rem;
-    font-size: 1.3rem;
-    color: $highlight;
-    background-color: $blue;
-    border: 1px solid $highlight;
-    border-radius: 5px;
-    transition: all 0.4s;
-    &:hover {
-        background-color: $light-blue;
-        cursor: pointer;
-    }
-
+  margin: 0.2rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 1.3rem;
+  color: $highlight;
+  background-color: $blue;
+  border: 1px solid $highlight;
+  border-radius: 5px;
+  transition: all 0.4s;
+  &:hover {
+    background-color: $light-blue;
+    cursor: pointer;
+  }
 }
 
 #output {
-    max-width: 70vh;
-    font-size: larger;
-    border: 0;
-    font-size: large;
-    border: 1px solid $highlight;
-    padding: 0.5rem;
-    color: $highlight;
+  max-width: 70vh;
+  font-size: larger;
+  border: 0;
+  font-size: large;
+  border: 1px solid $highlight;
+  padding: 0.5rem;
+  color: $highlight;
 }
 
 #manual {
+  margin: auto;
+  padding: 0;
+  width: 85vh;
+  max-width: 90%;
+  text-align: center;
+  font-size: 1em;
+
+  &::backdrop {
+    backdrop-filter: blur(3px);
+  }
+
+  div {
+    padding: 1em;
+  }
+
+  p,
+  li {
+    color: #bbb;
+  }
+  ul {
+    text-align: left;
+    display: table;
     margin: auto;
-    padding: 0;
-    width: 85vh;
-    max-width: 90%;
-    text-align: center;
-    font-size: 1em;
-
-    &::backdrop {
-        backdrop-filter: blur(3px);
+    ::marker {
+      color: $highlight2;
     }
 
-    div {
-        padding: 1em;
-    }
+    background-color: $blue;
+    padding: 0.5em 2em;
+    border: 1px solid $highlight2;
+  }
 
-    p,
-    li {
-        color: #bbb;
-    }
-    ul {
-        text-align: left;
-        display: table;
-        margin: auto;
-        ::marker {
-            color: $highlight2;
-        }
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: $highlight;
+    margin: 1em auto;
+    border-bottom: 1px solid $highlight;
+  }
 
-        background-color: $blue;
-        padding: 0.5em 2em;
-        border: 1px solid $highlight2;
-    }
+  h1 {
+    width: 90%;
+  }
 
-    h1,
-    h2,
-    h3,
-    h4 {
-        color: $highlight;
-        margin: 1em auto;
-        border-bottom: 1px solid $highlight;
-    }
+  h2 {
+    width: 80%;
+  }
 
-    h1 {
-        width: 90%;
-    }
+  h3 {
+    width: 60%;
+  }
 
-    h2 {
-        width: 80%;
-    }
-
-    h3 {
-        width: 60%;
-    }
-
-    h4 {
-        width: 45%;
-    }
+  h4 {
+    width: 45%;
+  }
 }
 
 .term {
-    color: $highlight;
-    font-family: monospace;
-    font-size: 1.2em;
+  color: $highlight;
+  font-family: monospace;
+  font-size: 1.2em;
 }
 
 a {
-    color: $highlight2;
+  color: $highlight2;
 }
 
 #game-container {
-    width: 720px;
-    height: 720px;
-    border: 1px solid $highlight;
+  width: 720px;
+  height: 720px;
+  border: 1px solid $highlight;
 }
 
 .loader {
-    font-size: 2em;
-    color: $highlight;
+  font-size: 2em;
+  color: $highlight;
+  vertical-align: middle;
+  display: flex;
+  .loading-text {
     vertical-align: middle;
-    display: flex;
-    .loading-text {
-        vertical-align: middle;
-        margin: auto 0.5em;
-    }
+    margin: auto 0.5em;
+  }
 }
 
 // spinner from https://loading.io/css/
 .lds-dual-ring,
 .lds-dual-ring:after {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 .lds-dual-ring {
-    display: inline-block;
-    width: 80px;
-    height: 80px;
+  display: inline-block;
+  width: 80px;
+  height: 80px;
 }
 .lds-dual-ring:after {
-    content: " ";
-    display: block;
-    width: 64px;
-    height: 64px;
-    margin: 8px;
-    border-radius: 50%;
-    border: 6.4px solid currentColor;
-    border-color: currentColor transparent currentColor transparent;
-    animation: lds-dual-ring 1.2s linear infinite;
+  content: " ";
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 8px;
+  border-radius: 50%;
+  border: 6.4px solid currentColor;
+  border-color: currentColor transparent currentColor transparent;
+  animation: lds-dual-ring 1.2s linear infinite;
 }
 @keyframes lds-dual-ring {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

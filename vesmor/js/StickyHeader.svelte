@@ -1,10 +1,10 @@
 <div>
-    <slot />
+  <slot />
 </div>
 
 <style>
-    div {
-        position: sticky;
-        top: 0;
-    }
+  div {
+    position: sticky;
+    top: 0;
+  }
 </style>
