@@ -4,6 +4,7 @@
     get_code,
     set_output,
     load_code,
+    set_vim_mode,
     init as init_editor,
   } from "./editor";
   import {
@@ -53,6 +54,8 @@
 
   let selected_code: string;
 
+  let vim_mode: boolean = false;
+
   let showModal = true;
   onMount(() => {
     init_editor();
@@ -89,6 +92,18 @@
     <button type="button" on:click={() => load_code_(selected_code)}
       ><Icons type={"download"} /> LOAD CODE
     </button>
+    <hr />
+    <div class="checkbox">
+      <input
+        type="checkbox"
+        name="vim_mode"
+        bind:checked={vim_mode}
+        on:change={() => {
+          set_vim_mode(vim_mode);
+        }}
+      />
+      <label for="vim_mode">VIM MODE</label><br />
+    </div>
     <!-- TODO: button for restarting the console (for when it crashes) -->
   </div>
 
@@ -139,5 +154,14 @@
       width: auto;
       flex-grow: 1;
     }
+  }
+
+  .checkbox {
+    display: "flex";
+    flex-direction: "row";
+    color: $highlight;
+    margin: 0.2rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 1.3rem;
   }
 </style>
