@@ -147,7 +147,7 @@
         webpack --mode production -o $out/web
         '';
 
-        npmDepsHash = "sha256-9eTJrzE4HgALFXQZImj/IGFQ2eK5bccFoccPegvm1XI=";
+        npmDepsHash = "sha256-26YNXbRgA+vsfKmI/rlXjWTaajoOCE87NRiXjC9TPZE=";
 
         outputs = ["out"];
 
