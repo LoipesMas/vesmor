@@ -68,6 +68,7 @@ module.exports = {
     },
     entry: {
         index: "./js/index.js",
+        manual: "./js/manual.js",
     },
     output: {
         hashFunction: "xxhash64",
